@@ -1,4 +1,5 @@
-import FitPulseV7 from '@/components/FitPulseV7';
+import PowerUp from '@/components/PowerUp';
+
 export default function Home() {
-  return <FitPulseV7 />;
+  return <PowerUp />;
 }
