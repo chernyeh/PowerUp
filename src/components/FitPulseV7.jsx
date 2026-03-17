@@ -201,6 +201,8 @@ export default function FitPulseV7() {
                   borderRadius: '6px',
                   fontFamily: '"Lora", Georgia, serif',
                   fontSize: '1em',
+                  color: colors.text,
+                  backgroundColor: 'white',
                 }}
               >
                 <option>11-12</option>
@@ -224,6 +226,8 @@ export default function FitPulseV7() {
                   borderRadius: '6px',
                   fontFamily: '"Lora", Georgia, serif',
                   fontSize: '1em',
+                  color: colors.text,
+                  backgroundColor: 'white',
                 }}
               >
                 <option value="light">Light</option>
