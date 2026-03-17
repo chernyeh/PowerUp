@@ -235,18 +235,20 @@ export default function FitPulseV7() {
   };
 
   const colors = {
-    primary: '#1e40af',
-    primaryLight: '#3b82f6',
-    dark: '#0f172a',
-    text: '#1f2937',
-    textSecondary: '#4b5563',
-    border: '#e5e7eb',
-    light: '#f9fafb',
+    primary: '#d97706',
+    primaryLight: '#f59e0b',
+    primaryDark: '#b45309',
+    dark: '#78350f',
+    text: '#5f3817',
+    textSecondary: '#8b5a2b',
+    border: '#ddd6d0',
+    light: '#fef6f0',
   };
 
   const generatePlan = () => {
     const exercisesToUse = selectedGoal ? goals[selectedGoal] : selectedExercises.length > 0 ? selectedExercises : Object.keys(exercises).slice(0, 5);
     const sets = fitnessLevel === 'light' ? 2 : fitnessLevel === 'intermediate' ? 3 : 4;
+    const transitionDuration = ageGroup === '11-12' ? 15 : 10; // 15 seconds for 11-12 year olds
     const plan = [];
 
     for (let set = 1; set <= sets; set++) {
@@ -255,9 +257,9 @@ export default function FitPulseV7() {
         const exerciseData = exercises[ex];
         const exerciseDuration = exerciseData.duration[fitnessLevel];
         plan.push({ exercise: ex, duration: exerciseDuration, type: 'exercise', set, totalSets: sets });
-        // Add 10s transition rest between exercises
+        // Add transition rest between exercises
         if (i < exercisesToUse.length - 1) {
-          plan.push({ type: 'transition', duration: 10 });
+          plan.push({ type: 'transition', duration: transitionDuration });
         }
       }
       // Add 45s rest between sets
@@ -334,8 +336,8 @@ export default function FitPulseV7() {
       }}>
         {/* HEADER */}
         <div style={{ marginBottom: '50px' }}>
-          <h1 style={{ color: colors.primary, marginBottom: '10px', fontSize: '2.8em', fontFamily: '"Lora", Georgia, serif', fontWeight: '400', letterSpacing: '0.5px' }}>FitPulse</h1>
-          <p style={{ color: colors.textSecondary, fontSize: '1.1em' }}>Your Personal Fitness Coach</p>
+          <h1 style={{ color: colors.primary, marginBottom: '10px', fontSize: '3.2em', fontFamily: '"Lora", Georgia, serif', fontWeight: '700', letterSpacing: '1px' }}>FitPulse</h1>
+          <p style={{ color: colors.textSecondary, fontSize: '1.2em', fontStyle: 'italic', fontWeight: '500' }}>Your Personal Fitness Coach</p>
         </div>
 
         {/* SETTINGS SECTION */}
@@ -410,36 +412,57 @@ export default function FitPulseV7() {
         <div style={{ marginBottom: '50px' }}>
           <h2 style={{ color: colors.text, marginBottom: '25px', fontSize: '1.4em', fontWeight: '400' }}>Quick Goals</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
-            {Object.keys(goals).map((goal) => (
-              <button
-                key={goal}
-                onClick={() => {
-                  setSelectedGoal(goal);
-                  setSelectedExercises([]);
-                }}
-                style={{
-                  padding: '18px',
-                  background: selectedGoal === goal ? colors.primary : 'white',
-                  color: selectedGoal === goal ? 'white' : colors.text,
-                  border: `2px solid ${selectedGoal === goal ? colors.primary : colors.border}`,
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontFamily: '"Lora", Georgia, serif',
-                  fontSize: '1em',
-                  fontWeight: selectedGoal === goal ? 'bold' : 'normal',
-                  transition: 'all 0.3s ease',
-                  textAlign: 'center',
-                  whiteSpace: 'pre-wrap',
-                }}
-              >
-                {goal === 'general' && '⭐\nGeneral'}
-                {goal === 'core' && '💪\nCore'}
-                {goal === 'cardio' && '🏃\nCardio'}
-                {goal === 'strength' && '💥\nStrength'}
-                {goal === 'balance' && '⚖️\nBalance'}
-                {goal === 'hiit' && '⚡\nHIIT'}
-              </button>
-            ))}
+            {Object.keys(goals).map((goal) => {
+              const goalExercises = goals[goal].map(ex => exercises[ex].description).slice(0, 3).join(', ');
+              return (
+                <button
+                  key={goal}
+                  onClick={() => {
+                    setSelectedGoal(goal);
+                    setSelectedExercises([]);
+                  }}
+                  style={{
+                    padding: '18px',
+                    background: selectedGoal === goal ? colors.primary : 'white',
+                    color: selectedGoal === goal ? 'white' : colors.text,
+                    border: `2px solid ${selectedGoal === goal ? colors.primary : colors.border}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontFamily: '"Lora", Georgia, serif',
+                    fontSize: '1em',
+                    fontWeight: selectedGoal === goal ? 'bold' : 'normal',
+                    transition: 'all 0.3s ease',
+                    textAlign: 'center',
+                    whiteSpace: 'pre-wrap',
+                    minHeight: '120px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div style={{ fontSize: '1.8em', marginBottom: '8px' }}>
+                    {goal === 'general' && '⭐'}
+                    {goal === 'core' && '💪'}
+                    {goal === 'cardio' && '🏃'}
+                    {goal === 'strength' && '💥'}
+                    {goal === 'balance' && '⚖️'}
+                    {goal === 'hiit' && '⚡'}
+                  </div>
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '1.1em' }}>
+                    {goal === 'general' && 'General'}
+                    {goal === 'core' && 'Core'}
+                    {goal === 'cardio' && 'Cardio'}
+                    {goal === 'strength' && 'Strength'}
+                    {goal === 'balance' && 'Balance'}
+                    {goal === 'hiit' && 'HIIT'}
+                  </div>
+                  <div style={{ fontSize: '0.8em', opacity: 0.9, lineHeight: '1.4' }}>
+                    {goalExercises}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
