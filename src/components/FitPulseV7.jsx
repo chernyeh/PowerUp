@@ -609,7 +609,7 @@ export default function FitPulseV7() {
           fontWeight: 'bold',
           fontFamily: 'monospace',
         }}>
-          {countdown > 0 ? countdown : `${String(Math.floor(current.duration / 60)).padStart(2, '0')}:${String(current.duration % 60).padStart(2, '0')}`}
+          {countdown > 0 ? countdown : `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`}
         </div>
 
         {countdown > 0 && (
