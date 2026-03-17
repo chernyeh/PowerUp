@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, StopCircle } from 'lucide-react';
+import { Play, Pause, StopCircle, Play as PlayIcon } from 'lucide-react';
 
 export default function FitPulseV7() {
   const [stage, setStage] = useState('config');
@@ -32,8 +32,6 @@ export default function FitPulseV7() {
       interval = setInterval(() => {
         setCountdown((c) => c - 1);
       }, 1000);
-    } else if (countdown === 0 && isRunning && stage === 'workout') {
-      // Countdown finished, start normal timer
     }
     return () => clearInterval(interval);
   }, [countdown, isRunning, stage]);
@@ -54,29 +52,177 @@ export default function FitPulseV7() {
     return () => clearInterval(interval);
   }, [isRunning, isPaused, timeLeft, currentIndex, workoutPlan, countdown]);
 
-  // ALL EXERCISES - organized by category
+  const encouragingPhrases = [
+    'You\'ve got this! Keep going!',
+    'Amazing effort! You\'re doing great!',
+    'Feeling strong? Keep pushing!',
+    'You\'re crushing it!',
+    'One more breath, you\'ve got this!',
+    'Great form! Keep it up!',
+    'You\'re almost there!',
+    'Believe in yourself! You can do it!',
+    'Every rep counts! Keep going!',
+    'You\'re stronger than you think!',
+    'Push through! You\'re doing awesome!',
+    'This is your moment! Own it!',
+    'You\'re on fire! Keep the momentum!',
+    'Your body is capable of amazing things!',
+    'Don\'t give up! You\'re so close!',
+  ];
+
+  const getRandomEncouragement = () => {
+    return encouragingPhrases[Math.floor(Math.random() * encouragingPhrases.length)];
+  };
+
+  // EXERCISE DATA WITH YOUTUBE VIDEOS AND INTELLIGENT TIMING
   const exercises = {
-    skipping: { caloriesPerMin: { light: 8, intermediate: 12, vigorous: 15 }, description: 'Skipping', tips: 'Keep steady rhythm.' },
-    plank: { caloriesPerMin: { light: 3, intermediate: 4.5, vigorous: 6 }, description: 'Plank Hold', tips: 'Keep your body straight.' },
-    sidePlank: { caloriesPerMin: { light: 3, intermediate: 4, vigorous: 5.5 }, description: 'Side Plank', tips: 'Keep your hips high.' },
-    crunches: { caloriesPerMin: { light: 2, intermediate: 3, vigorous: 4 }, description: 'Crunches', tips: 'Lift your shoulders only.' },
-    bicycleCrunches: { caloriesPerMin: { light: 3, intermediate: 4.5, vigorous: 6 }, description: 'Bicycle Crunches', tips: 'Alternate sides smoothly.' },
-    mountainClimbers: { caloriesPerMin: { light: 7, intermediate: 10, vigorous: 13 }, description: 'Mountain Climbers', tips: 'Keep hips level!' },
-    legRaises: { caloriesPerMin: { light: 3, intermediate: 4.5, vigorous: 6 }, description: 'Leg Raises', tips: 'Lift legs slowly.' },
-    balanceBoard: { caloriesPerMin: { light: 4, intermediate: 5, vigorous: 7 }, description: 'Balance Board', tips: 'Focus on stability.' },
-    jumpingJacks: { caloriesPerMin: { light: 6, intermediate: 8, vigorous: 11 }, description: 'Jumping Jacks', tips: 'Keep a steady pace.' },
-    marchingInPlace: { caloriesPerMin: { light: 3, intermediate: 4, vigorous: 5 }, description: 'Marching in Place', tips: 'Lift your knees high.' },
-    walkingLunges: { caloriesPerMin: { light: 4, intermediate: 6, vigorous: 8 }, description: 'Walking Lunges', tips: 'Keep your torso upright.' },
-    highKnees: { caloriesPerMin: { light: 7, intermediate: 10, vigorous: 13 }, description: 'High Knees', tips: 'Keep moving fast!' },
-    burpees: { caloriesPerMin: { light: 8, intermediate: 11, vigorous: 14 }, description: 'Burpees', tips: 'Quality over speed!' },
-    pushups: { caloriesPerMin: { light: 5, intermediate: 7, vigorous: 10 }, description: 'Push-ups', tips: 'Keep elbows close!' },
-    squats: { caloriesPerMin: { light: 4, intermediate: 6, vigorous: 8 }, description: 'Squats', tips: 'Keep your chest up!' },
-    jumpSquats: { caloriesPerMin: { light: 7, intermediate: 10, vigorous: 13 }, description: 'Jump Squats', tips: 'Land softly.' },
-    gluteBridges: { caloriesPerMin: { light: 3, intermediate: 4, vigorous: 5.5 }, description: 'Glute Bridges', tips: 'Squeeze glutes at top!' },
-    childsPose: { caloriesPerMin: { light: 1, intermediate: 1.5, vigorous: 2 }, description: 'Child\'s Pose', tips: 'Relax and breathe.' },
-    downwardDog: { caloriesPerMin: { light: 2.5, intermediate: 3.5, vigorous: 5 }, description: 'Downward Dog', tips: 'Push your hips up high.' },
-    armCircles: { caloriesPerMin: { light: 2, intermediate: 3, vigorous: 4 }, description: 'Arm Circles', tips: 'Both directions!' },
-    tricepDips: { caloriesPerMin: { light: 4, intermediate: 6, vigorous: 8 }, description: 'Tricep Dips', tips: 'Lower your body slowly.' },
+    skipping: {
+      caloriesPerMin: { light: 8, intermediate: 12, vigorous: 15 },
+      description: 'Skipping',
+      duration: { light: 45, intermediate: 60, vigorous: 75 },
+      videoUrl: 'https://www.youtube.com/embed/N5RqJqG5K6c',
+      tips: 'Keep steady rhythm. Land softly on the balls of your feet.',
+    },
+    plank: {
+      caloriesPerMin: { light: 3, intermediate: 4.5, vigorous: 6 },
+      description: 'Plank Hold',
+      duration: { light: 30, intermediate: 45, vigorous: 60 },
+      videoUrl: 'https://www.youtube.com/embed/QoGhk0FkkIU',
+      tips: 'Keep your body straight like a board. Engage your core!',
+    },
+    sidePlank: {
+      caloriesPerMin: { light: 3, intermediate: 4, vigorous: 5.5 },
+      description: 'Side Plank',
+      duration: { light: 30, intermediate: 40, vigorous: 50 },
+      videoUrl: 'https://www.youtube.com/embed/qFj-xc3u5y0',
+      tips: 'Stack your feet and keep your hips high.',
+    },
+    crunches: {
+      caloriesPerMin: { light: 2, intermediate: 3, vigorous: 4 },
+      description: 'Crunches',
+      duration: { light: 40, intermediate: 50, vigorous: 60 },
+      videoUrl: 'https://www.youtube.com/embed/Xyd_fa5zoEU',
+      tips: 'Hands behind your head. Lift your shoulders only.',
+    },
+    bicycleCrunches: {
+      caloriesPerMin: { light: 3, intermediate: 4.5, vigorous: 6 },
+      description: 'Bicycle Crunches',
+      duration: { light: 40, intermediate: 50, vigorous: 60 },
+      videoUrl: 'https://www.youtube.com/embed/kzdnR6H-F1k',
+      tips: 'Bring opposite elbow to knee. Alternate sides smoothly.',
+    },
+    mountainClimbers: {
+      caloriesPerMin: { light: 7, intermediate: 10, vigorous: 13 },
+      description: 'Mountain Climbers',
+      duration: { light: 45, intermediate: 60, vigorous: 75 },
+      videoUrl: 'https://www.youtube.com/embed/nmwgirgblLw',
+      tips: 'Start in plank. Bring knees to chest quickly. Keep hips level!',
+    },
+    legRaises: {
+      caloriesPerMin: { light: 3, intermediate: 4.5, vigorous: 6 },
+      description: 'Leg Raises',
+      duration: { light: 30, intermediate: 40, vigorous: 50 },
+      videoUrl: 'https://www.youtube.com/embed/RgMvXYQUhLs',
+      tips: 'Lie flat. Lift legs slowly without bending knees.',
+    },
+    balanceBoard: {
+      caloriesPerMin: { light: 4, intermediate: 5, vigorous: 7 },
+      description: 'Balance Board',
+      duration: { light: 40, intermediate: 50, vigorous: 60 },
+      videoUrl: 'https://www.youtube.com/embed/Z9aXvC5BjD0',
+      tips: 'Focus on stability. Small adjustments help!',
+    },
+    jumpingJacks: {
+      caloriesPerMin: { light: 6, intermediate: 8, vigorous: 11 },
+      description: 'Jumping Jacks',
+      duration: { light: 45, intermediate: 60, vigorous: 75 },
+      videoUrl: 'https://www.youtube.com/embed/3mClXukeKxg',
+      tips: 'Keep a steady pace. Your feet apart, arms up!',
+    },
+    marchingInPlace: {
+      caloriesPerMin: { light: 3, intermediate: 4, vigorous: 5 },
+      description: 'Marching in Place',
+      duration: { light: 40, intermediate: 50, vigorous: 60 },
+      videoUrl: 'https://www.youtube.com/embed/i2YmwJvGvmU',
+      tips: 'Lift your knees up high. Keep your arms moving.',
+    },
+    walkingLunges: {
+      caloriesPerMin: { light: 4, intermediate: 6, vigorous: 8 },
+      description: 'Walking Lunges',
+      duration: { light: 40, intermediate: 50, vigorous: 60 },
+      videoUrl: 'https://www.youtube.com/embed/QOVaHwm-Q6U',
+      tips: 'Step forward and bend your back knee. Keep your torso upright.',
+    },
+    highKnees: {
+      caloriesPerMin: { light: 7, intermediate: 10, vigorous: 13 },
+      description: 'High Knees',
+      duration: { light: 45, intermediate: 60, vigorous: 75 },
+      videoUrl: 'https://www.youtube.com/embed/nPvJZI5fYMM',
+      tips: 'Pump your knees up to hip height. Keep moving fast!',
+    },
+    burpees: {
+      caloriesPerMin: { light: 8, intermediate: 11, vigorous: 14 },
+      description: 'Burpees',
+      duration: { light: 40, intermediate: 50, vigorous: 60 },
+      videoUrl: 'https://www.youtube.com/embed/JZQA8BlU2fg',
+      tips: 'Go at your own pace. Quality over speed!',
+    },
+    pushups: {
+      caloriesPerMin: { light: 5, intermediate: 7, vigorous: 10 },
+      description: 'Push-ups',
+      duration: { light: 40, intermediate: 50, vigorous: 60 },
+      videoUrl: 'https://www.youtube.com/embed/Eh00_rniF8E',
+      tips: 'Lower yourself until chest nearly touches the ground. Keep elbows close!',
+    },
+    squats: {
+      caloriesPerMin: { light: 4, intermediate: 6, vigorous: 8 },
+      description: 'Squats',
+      duration: { light: 45, intermediate: 60, vigorous: 75 },
+      videoUrl: 'https://www.youtube.com/embed/xqvCmoLUGkQ',
+      tips: 'Bend your knees and lower your hips. Keep your chest up!',
+    },
+    jumpSquats: {
+      caloriesPerMin: { light: 7, intermediate: 10, vigorous: 13 },
+      description: 'Jump Squats',
+      duration: { light: 40, intermediate: 50, vigorous: 60 },
+      videoUrl: 'https://www.youtube.com/embed/GSO8jVMkfXA',
+      tips: 'Squat down then jump explosively. Land softly.',
+    },
+    gluteBridges: {
+      caloriesPerMin: { light: 3, intermediate: 4, vigorous: 5.5 },
+      description: 'Glute Bridges',
+      duration: { light: 40, intermediate: 50, vigorous: 60 },
+      videoUrl: 'https://www.youtube.com/embed/wPM8ic32ufQ',
+      tips: 'Lie on your back. Push through heels. Squeeze glutes at top!',
+    },
+    childsPose: {
+      caloriesPerMin: { light: 1, intermediate: 1.5, vigorous: 2 },
+      description: 'Child\'s Pose',
+      duration: { light: 30, intermediate: 40, vigorous: 50 },
+      videoUrl: 'https://www.youtube.com/embed/TaP3C9xwMSI',
+      tips: 'Kneel and sit back on your heels. Relax and breathe.',
+    },
+    downwardDog: {
+      caloriesPerMin: { light: 2.5, intermediate: 3.5, vigorous: 5 },
+      description: 'Downward Dog',
+      duration: { light: 35, intermediate: 45, vigorous: 55 },
+      videoUrl: 'https://www.youtube.com/embed/TaP3C9xwMSI',
+      tips: 'Hands and feet on ground. Push your hips up high.',
+    },
+    armCircles: {
+      caloriesPerMin: { light: 2, intermediate: 3, vigorous: 4 },
+      description: 'Arm Circles',
+      duration: { light: 35, intermediate: 45, vigorous: 55 },
+      videoUrl: 'https://www.youtube.com/embed/O7JDKL-Vszg',
+      tips: 'Small circles first, then larger. Both directions!',
+    },
+    tricepDips: {
+      caloriesPerMin: { light: 4, intermediate: 6, vigorous: 8 },
+      description: 'Tricep Dips',
+      duration: { light: 40, intermediate: 50, vigorous: 60 },
+      videoUrl: 'https://www.youtube.com/embed/4qzUBwC9VlI',
+      tips: 'Use a chair or bench. Lower your body slowly.',
+    },
   };
 
   const goals = {
@@ -93,6 +239,7 @@ export default function FitPulseV7() {
     primaryLight: '#3b82f6',
     dark: '#0f172a',
     text: '#1f2937',
+    textSecondary: '#4b5563',
     border: '#e5e7eb',
     light: '#f9fafb',
   };
@@ -105,7 +252,9 @@ export default function FitPulseV7() {
     for (let set = 1; set <= sets; set++) {
       for (let i = 0; i < exercisesToUse.length; i++) {
         const ex = exercisesToUse[i];
-        plan.push({ exercise: ex, duration: 45, type: 'exercise', set, totalSets: sets });
+        const exerciseData = exercises[ex];
+        const exerciseDuration = exerciseData.duration[fitnessLevel];
+        plan.push({ exercise: ex, duration: exerciseDuration, type: 'exercise', set, totalSets: sets });
         // Add 10s transition rest between exercises
         if (i < exercisesToUse.length - 1) {
           plan.push({ type: 'transition', duration: 10 });
@@ -119,7 +268,7 @@ export default function FitPulseV7() {
 
     setWorkoutPlan(plan);
     setCurrentIndex(0);
-    setTimeLeft(5);
+    setTimeLeft(45);
     setCountdown(5);
     setStage('prep');
   };
@@ -127,13 +276,13 @@ export default function FitPulseV7() {
   const startWorkout = () => {
     setStage('workout');
     setCountdown(5);
-    setTimeLeft(45); // Set proper duration, countdown will override display
+    setTimeLeft(45);
     speak('Get ready! Starting in 5, 4, 3, 2, 1. Let\'s go!');
-    // Start actual workout after countdown
     setTimeout(() => {
       setIsRunning(true);
       setCountdown(0);
-      setTimeLeft(45); // Reset to proper exercise duration
+      const firstExercise = workoutPlan[0];
+      setTimeLeft(firstExercise.duration);
     }, 5100);
   };
 
@@ -141,10 +290,10 @@ export default function FitPulseV7() {
     if (currentIndex < workoutPlan.length - 1) {
       const nextIndex = currentIndex + 1;
       setCurrentIndex(nextIndex);
-      setTimeLeft(workoutPlan[nextIndex].duration);
       const nextItem = workoutPlan[nextIndex];
+      setTimeLeft(nextItem.duration);
       if (nextItem.type === 'exercise') {
-        speak(`Next up: ${exercises[nextItem.exercise].description}. You've got this!`);
+        speak(`Next up: ${exercises[nextItem.exercise].description}. ${getRandomEncouragement()}`);
       } else if (nextItem.type === 'transition') {
         speak('Take a breath, get ready for the next one');
       } else if (nextItem.type === 'rest') {
@@ -163,7 +312,6 @@ export default function FitPulseV7() {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = voiceRate;
       utterance.pitch = voicePitch;
-      // Try to use a female voice for warmer tone
       const voices = synth.current.getVoices();
       const femaleVoice = voices.find(v => v.name.includes('female') || v.name.includes('Female') || v.name.includes('woman'));
       if (femaleVoice) {
@@ -195,7 +343,6 @@ export default function FitPulseV7() {
           <h2 style={{ color: colors.text, marginBottom: '25px', fontSize: '1.4em', fontWeight: '400' }}>Customize Your Workout</h2>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '25px', marginBottom: '30px' }}>
-            {/* Age Group */}
             <div>
               <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: colors.text, fontSize: '0.95em' }}>Age Group</label>
               <select
@@ -222,7 +369,6 @@ export default function FitPulseV7() {
               </select>
             </div>
 
-            {/* Fitness Level */}
             <div>
               <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: colors.text, fontSize: '0.95em' }}>Fitness Level</label>
               <select
@@ -246,7 +392,6 @@ export default function FitPulseV7() {
               </select>
             </div>
 
-            {/* Duration */}
             <div>
               <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: colors.text, fontSize: '0.95em' }}>Duration: {duration} min</label>
               <input
@@ -284,6 +429,7 @@ export default function FitPulseV7() {
                   fontWeight: selectedGoal === goal ? 'bold' : 'normal',
                   transition: 'all 0.3s ease',
                   textAlign: 'center',
+                  whiteSpace: 'pre-wrap',
                 }}
               >
                 {goal === 'general' && '⭐\nGeneral'}
@@ -396,11 +542,13 @@ export default function FitPulseV7() {
             <div key={idx} style={{
               padding: '12px',
               borderBottom: `1px solid ${colors.border}`,
-              color: item.type === 'rest' ? '#9ca3af' : colors.text,
+              color: item.type === 'rest' ? colors.textSecondary : colors.text,
               fontWeight: item.type === 'exercise' ? 'bold' : 'normal',
             }}>
               {item.type === 'exercise' ? (
                 <span>💪 {exercises[item.exercise].description} ({item.duration}s) - Set {item.set}/{item.totalSets}</span>
+              ) : item.type === 'transition' ? (
+                <span>✨ Quick Break ({item.duration}s)</span>
               ) : (
                 <span>😤 Rest ({item.duration}s)</span>
               )}
@@ -461,7 +609,7 @@ export default function FitPulseV7() {
           fontWeight: 'bold',
           fontFamily: 'monospace',
         }}>
-          {countdown > 0 ? countdown : `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`}
+          {countdown > 0 ? countdown : `${String(Math.floor(current.duration / 60)).padStart(2, '0')}:${String(current.duration % 60).padStart(2, '0')}`}
         </div>
 
         {countdown > 0 && (
@@ -480,7 +628,7 @@ export default function FitPulseV7() {
                 } else if (isRest) {
                   speak('Rest time. Breathe and relax');
                 } else {
-                  speak(`Starting ${exerciseData?.description}. You can do it!`);
+                  speak(`Starting ${exerciseData?.description}. ${getRandomEncouragement()}`);
                 }
               }}
               style={{
@@ -495,7 +643,7 @@ export default function FitPulseV7() {
                 fontFamily: '"Lora", Georgia, serif',
               }}
             >
-              <Play size={20} style={{ display: 'inline', marginRight: '8px' }} /> Play
+              <PlayIcon size={20} style={{ display: 'inline', marginRight: '8px' }} /> Play
             </button>
           ) : (
             <>
@@ -551,7 +699,37 @@ export default function FitPulseV7() {
             marginBottom: '20px',
             border: `1px solid ${colors.border}`,
           }}>
-            <p style={{ color: colors.text, fontSize: '1.1em' }}>💡 {exerciseData.tips}</p>
+            <p style={{ color: colors.text, fontSize: '1.1em', marginBottom: '15px' }}>💡 {exerciseData.tips}</p>
+            
+            {/* VIDEO LINK - ELEGANT AND NOT INTRUSIVE */}
+            {exerciseData.videoUrl && (
+              <a
+                href={exerciseData.videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-block',
+                  color: colors.primary,
+                  textDecoration: 'none',
+                  fontSize: '0.9em',
+                  padding: '8px 16px',
+                  border: `1px solid ${colors.primary}`,
+                  borderRadius: '4px',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = colors.primary;
+                  e.target.style.color = 'white';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'transparent';
+                  e.target.style.color = colors.primary;
+                }}
+              >
+                📹 Watch Video
+              </a>
+            )}
           </div>
         )}
 
@@ -592,7 +770,7 @@ export default function FitPulseV7() {
         minHeight: '100vh',
         background: colors.light,
       }}>
-        <h1 style={{ fontSize: '3em', color: colors.primary, marginBottom: '20px', fontFamily: '"Playfair Display", serif' }}>🎉 Workout Complete!</h1>
+        <h1 style={{ fontSize: '3em', color: colors.primary, marginBottom: '20px', fontFamily: '"Lora", Georgia, serif', fontWeight: '400' }}>🎉 Workout Complete!</h1>
         <p style={{ fontSize: '1.3em', color: colors.text, marginBottom: '30px' }}>Great job! You completed {workoutPlan.length} exercises.</p>
         <button
           onClick={() => {
