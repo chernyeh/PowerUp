@@ -1,71 +1,67 @@
-'use client';
-import { useState, useRef, useCallback, useEffect } from 'react';
+// src/hooks/useTimer.js
+// Custom hook for workout timer management
 
-export function useTimer(onTick, onComplete) {
+import { useState, useEffect, useRef } from 'react';
+
+export const useTimer = () => {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const intervalRef = useRef(null);
-  const onTickRef = useRef(onTick);
-  const onCompleteRef = useRef(onComplete);
-
-  // Keep callback refs current
-  onTickRef.current = onTick;
-  onCompleteRef.current = onComplete;
-
-  const start = useCallback((seconds) => {
-    setTimeRemaining(seconds);
-    setIsRunning(true);
-  }, []);
-
-  const pause = useCallback(() => {
-    setIsRunning(false);
-  }, []);
-
-  const resume = useCallback(() => {
-    setIsRunning(true);
-  }, []);
-
-  const toggle = useCallback(() => {
-    setIsRunning(prev => !prev);
-  }, []);
-
-  const reset = useCallback(() => {
-    setIsRunning(false);
-    setTimeRemaining(0);
-    if (intervalRef.current) clearInterval(intervalRef.current);
-  }, []);
+  const [totalTimeUsed, setTotalTimeUsed] = useState(0);
+  const timerRef = useRef(null);
 
   useEffect(() => {
-    if (!isRunning) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
-    }
+    if (!isRunning) return;
 
-    intervalRef.current = setInterval(() => {
-      setTimeRemaining(prev => {
+    timerRef.current = setInterval(() => {
+      setTimeRemaining((prev) => {
         if (prev <= 1) {
-          onCompleteRef.current?.();
-          return 0;
+          return 0; // Will be handled by parent component
         }
-        onTickRef.current?.(prev - 1);
         return prev - 1;
       });
+
+      setTotalTimeUsed((prev) => prev + 1);
     }, 1000);
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
     };
   }, [isRunning]);
+
+  const startTimer = (duration) => {
+    setTimeRemaining(duration);
+    setIsRunning(true);
+  };
+
+  const pauseTimer = () => {
+    setIsRunning(false);
+  };
+
+  const resumeTimer = () => {
+    setIsRunning(true);
+  };
+
+  const resetTimer = () => {
+    setIsRunning(false);
+    setTimeRemaining(0);
+    setTotalTimeUsed(0);
+  };
+
+  const setDuration = (duration) => {
+    setTimeRemaining(duration);
+  };
 
   return {
     timeRemaining,
     isRunning,
-    start,
-    pause,
-    resume,
-    toggle,
-    reset,
-    setTimeRemaining,
+    totalTimeUsed,
+    startTimer,
+    pauseTimer,
+    resumeTimer,
+    resetTimer,
+    setDuration,
     setIsRunning,
   };
-}
+};
