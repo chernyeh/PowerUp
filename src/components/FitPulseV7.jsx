@@ -5,7 +5,7 @@ import { Play, Pause, StopCircle } from 'lucide-react';
 
 export default function FitPulseV7() {
   const [stage, setStage] = useState('config');
-  const [ageGroup, setAgeGroup] = useState('13-17');
+  const [ageGroup, setAgeGroup] = useState('11-12');
   const [fitnessLevel, setFitnessLevel] = useState('intermediate');
   const [duration, setDuration] = useState(20);
   const [selectedGoal, setSelectedGoal] = useState(null);
@@ -127,12 +127,14 @@ export default function FitPulseV7() {
   const startWorkout = () => {
     setStage('workout');
     setCountdown(5);
-    setTimeLeft(5);
+    setTimeLeft(45); // Set proper duration, countdown will override display
     speak('Get ready! Starting in 5, 4, 3, 2, 1. Let\'s go!');
-    // Start after countdown
+    // Start actual workout after countdown
     setTimeout(() => {
       setIsRunning(true);
-    }, 5000);
+      setCountdown(0);
+      setTimeLeft(45); // Reset to proper exercise duration
+    }, 5100);
   };
 
   const moveToNextExercise = () => {
@@ -175,34 +177,40 @@ export default function FitPulseV7() {
   if (stage === 'config') {
     return (
       <div style={{
-        padding: '40px',
+        padding: '50px 40px',
         fontFamily: '"Lora", Georgia, serif',
-        maxWidth: '1000px',
+        maxWidth: '900px',
         margin: '0 auto',
         minHeight: '100vh',
         background: colors.light,
       }}>
-        <h1 style={{ color: colors.primary, marginBottom: '30px', fontSize: '2.5em', fontFamily: '"Lora", Georgia, serif', fontWeight: '400', letterSpacing: '0.5px' }}>FitPulse Workout</h1>
+        {/* HEADER */}
+        <div style={{ marginBottom: '50px' }}>
+          <h1 style={{ color: colors.primary, marginBottom: '10px', fontSize: '2.8em', fontFamily: '"Lora", Georgia, serif', fontWeight: '400', letterSpacing: '0.5px' }}>FitPulse</h1>
+          <p style={{ color: colors.textSecondary, fontSize: '1.1em' }}>Your Personal Fitness Coach</p>
+        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-          {/* LEFT COLUMN - SETTINGS */}
-          <div>
-            <h2 style={{ color: colors.text, marginBottom: '20px', fontSize: '1.3em' }}>Settings</h2>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: colors.text }}>Age Group:</label>
+        {/* SETTINGS SECTION */}
+        <div style={{ marginBottom: '50px' }}>
+          <h2 style={{ color: colors.text, marginBottom: '25px', fontSize: '1.4em', fontWeight: '400' }}>Customize Your Workout</h2>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '25px', marginBottom: '30px' }}>
+            {/* Age Group */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: colors.text, fontSize: '0.95em' }}>Age Group</label>
               <select
                 value={ageGroup}
                 onChange={(e) => setAgeGroup(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '10px',
+                  padding: '12px',
                   border: `1px solid ${colors.border}`,
                   borderRadius: '6px',
                   fontFamily: '"Lora", Georgia, serif',
                   fontSize: '1em',
                   color: colors.text,
                   backgroundColor: 'white',
+                  cursor: 'pointer',
                 }}
               >
                 <option>11-12</option>
@@ -214,20 +222,22 @@ export default function FitPulseV7() {
               </select>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: colors.text }}>Fitness Level:</label>
+            {/* Fitness Level */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: colors.text, fontSize: '0.95em' }}>Fitness Level</label>
               <select
                 value={fitnessLevel}
                 onChange={(e) => setFitnessLevel(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '10px',
+                  padding: '12px',
                   border: `1px solid ${colors.border}`,
                   borderRadius: '6px',
                   fontFamily: '"Lora", Georgia, serif',
                   fontSize: '1em',
                   color: colors.text,
                   backgroundColor: 'white',
+                  cursor: 'pointer',
                 }}
               >
                 <option value="light">Light</option>
@@ -236,115 +246,125 @@ export default function FitPulseV7() {
               </select>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: colors.text }}>Duration: {duration} min</label>
+            {/* Duration */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: colors.text, fontSize: '0.95em' }}>Duration: {duration} min</label>
               <input
                 type="range"
                 min="5"
                 max="60"
                 value={duration}
                 onChange={(e) => setDuration(Number(e.target.value))}
-                style={{ width: '100%' }}
+                style={{ width: '100%', cursor: 'pointer' }}
               />
             </div>
-
-            <div style={{ marginBottom: '30px' }}>
-              <label style={{ display: 'block', marginBottom: '12px', fontWeight: 'bold', color: colors.text }}>Quick Goals:</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {Object.keys(goals).map((goal) => (
-                  <button
-                    key={goal}
-                    onClick={() => {
-                      setSelectedGoal(goal);
-                      setSelectedExercises([]);
-                    }}
-                    style={{
-                      padding: '10px',
-                      background: selectedGoal === goal ? colors.primary : 'white',
-                      color: selectedGoal === goal ? 'white' : colors.text,
-                      border: `1px solid ${selectedGoal === goal ? colors.primary : colors.border}`,
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontFamily: '"Lora", Georgia, serif',
-                      fontSize: '0.95em',
-                      fontWeight: selectedGoal === goal ? 'bold' : 'normal',
-                    }}
-                  >
-                    {goal === 'general' && '⭐ General Fitness'}
-                    {goal === 'core' && '💪 Core Strength'}
-                    {goal === 'cardio' && '🏃 Cardio Blast'}
-                    {goal === 'strength' && '💥 Strength Building'}
-                    {goal === 'balance' && '⚖️ Balance & Flexibility'}
-                    {goal === 'hiit' && '⚡ HIIT Training'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={() => generatePlan()}
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: colors.primary,
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                fontFamily: '"Lora", Georgia, serif',
-                fontSize: '1em',
-              }}
-            >
-              📋 Prepare Workout
-            </button>
           </div>
+        </div>
 
-          {/* RIGHT COLUMN - EXERCISE LIST */}
-          <div>
-            <h2 style={{ color: colors.text, marginBottom: '20px', fontSize: '1.3em' }}>Exercises</h2>
-            <p style={{ color: colors.text, marginBottom: '15px', fontSize: '0.9em' }}>Or mix & match ({selectedExercises.length} selected):</p>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '10px',
-              maxHeight: '600px',
-              overflowY: 'auto',
-              padding: '10px',
-              border: `1px solid ${colors.border}`,
-              borderRadius: '6px',
-              background: 'white',
-            }}>
-              {Object.keys(exercises).map((key) => (
-                <button
-                  key={key}
-                  onClick={() => {
-                    setSelectedGoal(null);
-                    if (selectedExercises.includes(key)) {
-                      setSelectedExercises(selectedExercises.filter((ex) => ex !== key));
-                    } else {
-                      setSelectedExercises([...selectedExercises, key]);
-                    }
-                  }}
-                  style={{
-                    padding: '10px',
-                    background: selectedExercises.includes(key) ? colors.primaryLight : 'white',
-                    color: selectedExercises.includes(key) ? 'white' : colors.text,
-                    border: `1px solid ${selectedExercises.includes(key) ? colors.primaryLight : colors.border}`,
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontFamily: '"Lora", Georgia, serif',
-                    fontSize: '0.9em',
-                    fontWeight: selectedExercises.includes(key) ? 'bold' : 'normal',
-                    textAlign: 'left',
-                  }}
-                >
-                  {exercises[key].description}
-                </button>
-              ))}
-            </div>
+        {/* QUICK GOALS */}
+        <div style={{ marginBottom: '50px' }}>
+          <h2 style={{ color: colors.text, marginBottom: '25px', fontSize: '1.4em', fontWeight: '400' }}>Quick Goals</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+            {Object.keys(goals).map((goal) => (
+              <button
+                key={goal}
+                onClick={() => {
+                  setSelectedGoal(goal);
+                  setSelectedExercises([]);
+                }}
+                style={{
+                  padding: '18px',
+                  background: selectedGoal === goal ? colors.primary : 'white',
+                  color: selectedGoal === goal ? 'white' : colors.text,
+                  border: `2px solid ${selectedGoal === goal ? colors.primary : colors.border}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontFamily: '"Lora", Georgia, serif',
+                  fontSize: '1em',
+                  fontWeight: selectedGoal === goal ? 'bold' : 'normal',
+                  transition: 'all 0.3s ease',
+                  textAlign: 'center',
+                }}
+              >
+                {goal === 'general' && '⭐\nGeneral'}
+                {goal === 'core' && '💪\nCore'}
+                {goal === 'cardio' && '🏃\nCardio'}
+                {goal === 'strength' && '💥\nStrength'}
+                {goal === 'balance' && '⚖️\nBalance'}
+                {goal === 'hiit' && '⚡\nHIIT'}
+              </button>
+            ))}
           </div>
+        </div>
+
+        {/* EXERCISES */}
+        <div style={{ marginBottom: '50px' }}>
+          <h2 style={{ color: colors.text, marginBottom: '25px', fontSize: '1.4em', fontWeight: '400' }}>Or Mix & Match Exercises</h2>
+          <p style={{ color: colors.textSecondary, marginBottom: '20px', fontSize: '0.95em' }}>({selectedExercises.length} selected)</p>
+          
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+            gap: '12px',
+            padding: '20px',
+            border: `1px solid ${colors.border}`,
+            borderRadius: '8px',
+            background: 'white',
+          }}>
+            {Object.keys(exercises).map((key) => (
+              <button
+                key={key}
+                onClick={() => {
+                  setSelectedGoal(null);
+                  if (selectedExercises.includes(key)) {
+                    setSelectedExercises(selectedExercises.filter((ex) => ex !== key));
+                  } else {
+                    setSelectedExercises([...selectedExercises, key]);
+                  }
+                }}
+                style={{
+                  padding: '12px',
+                  background: selectedExercises.includes(key) ? colors.primaryLight : 'white',
+                  color: selectedExercises.includes(key) ? 'white' : colors.text,
+                  border: `1px solid ${selectedExercises.includes(key) ? colors.primaryLight : colors.border}`,
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontFamily: '"Lora", Georgia, serif',
+                  fontSize: '0.9em',
+                  fontWeight: selectedExercises.includes(key) ? 'bold' : 'normal',
+                  textAlign: 'center',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {exercises[key].description}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* START BUTTON */}
+        <div style={{ marginBottom: '30px' }}>
+          <button
+            onClick={() => generatePlan()}
+            style={{
+              width: '100%',
+              padding: '16px',
+              background: colors.primary,
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontFamily: '"Lora", Georgia, serif',
+              fontSize: '1.1em',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 2px 8px rgba(30, 64, 175, 0.2)',
+            }}
+            onMouseEnter={(e) => e.target.style.boxShadow = '0 4px 12px rgba(30, 64, 175, 0.3)'}
+            onMouseLeave={(e) => e.target.style.boxShadow = '0 2px 8px rgba(30, 64, 175, 0.2)'}
+          >
+            📋 Prepare Workout
+          </button>
         </div>
       </div>
     );
