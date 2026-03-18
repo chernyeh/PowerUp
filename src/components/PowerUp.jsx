@@ -787,19 +787,19 @@ export default function PowerUp() {
     const exerciseData = current?.type === 'exercise' ? exercises[current.exercise] : null;
 
     return (
-      <div style={{ padding: '15px 25px', ...fontStyle, minHeight: '100vh', background: colors.light, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <div style={{ padding: '12px 20px', ...fontStyle, minHeight: '100vh', background: colors.light, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         {/* TOP: Timer and Activity */}
         <div style={{ minHeight: 0, flex: 0 }}>
-          <h2 style={{ color: colors.primary, marginBottom: '8px', ...fontStyle, fontSize: '2em', fontWeight: '600' }}>
+          <h2 style={{ color: colors.primary, marginBottom: '5px', ...fontStyle, fontSize: '2.4em', fontWeight: '600' }}>
             {countdown > 0 ? 'Get Ready!' : current?.type === 'rest' ? 'Rest Time' : current?.type === 'transition' ? 'Break Time' : exerciseData?.description || 'Rest'}
           </h2>
           
-          <div style={{ fontSize: countdown > 0 ? '16em' : '13em', color: colors.primary, marginBottom: '8px', fontWeight: '600', fontFamily: 'monospace', lineHeight: '1' }}>
+          <div style={{ fontSize: countdown > 0 ? '18em' : '14em', color: colors.primary, marginBottom: '5px', fontWeight: '600', fontFamily: 'monospace', lineHeight: '1' }}>
             {countdown > 0 ? countdown : `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`}
           </div>
           
           {current?.isSkipping && !countdown && (
-            <p style={{ color: colors.primary, fontSize: '1em', fontWeight: '600', marginBottom: '8px', ...fontStyle }}>
+            <p style={{ color: colors.primary, fontSize: '1.05em', fontWeight: '600', marginBottom: '8px', ...fontStyle }}>
               Est. Skips: {estimatedSkips}
             </p>
           )}
@@ -807,7 +807,7 @@ export default function PowerUp() {
 
         {/* MIDDLE: Controls and Tips */}
         <div style={{ minHeight: 0, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
-          <div style={{ marginBottom: '12px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+          <div style={{ marginBottom: '10px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
             {!isRunning ? (
               <button onClick={() => { setIsRunning(true); setCountdown(0); setIsPaused(false); }} style={{ padding: '10px 16px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.85em', ...fontStyle }}>
                 <PlayIcon size={14} style={{ display: 'inline', marginRight: '4px' }} /> Play
@@ -825,9 +825,9 @@ export default function PowerUp() {
           </div>
 
           {exerciseData && (
-            <div style={{ background: 'white', padding: '10px', borderRadius: '8px', marginBottom: '12px', border: `1px solid ${colors.border}`, maxWidth: '500px', margin: '0 auto', fontSize: '0.85em' }}>
+            <div style={{ background: 'white', padding: '8px', borderRadius: '6px', marginBottom: '8px', border: `1px solid ${colors.border}`, maxWidth: '500px', margin: '0 auto' }}>
               {exerciseData.tips.split('. ').map((sentence, idx) => (
-                <p key={idx} style={{ color: colors.text, fontSize: '0.8em', marginBottom: idx === exerciseData.tips.split('. ').length - 1 ? '0' : '4px', lineHeight: '1.3', fontWeight: '400' }}>
+                <p key={idx} style={{ color: colors.text, fontSize: '0.8em', marginBottom: idx === exerciseData.tips.split('. ').length - 1 ? '0' : '3px', lineHeight: '1.3', fontWeight: '400' }}>
                   {sentence}{sentence.endsWith('.') ? '' : '.'}
                 </p>
               ))}
@@ -835,18 +835,18 @@ export default function PowerUp() {
           )}
         </div>
 
-        {/* BOTTOM: Workout Plan Grid (no scrolling) */}
-        <div style={{ background: 'white', padding: '12px', borderRadius: '12px', border: `2px solid ${colors.border}`, minHeight: 0, flex: 0 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '6px', maxHeight: '150px', overflowY: 'auto', paddingRight: '6px' }}>
+        {/* BOTTOM: Workout Plan Grid (enlarged) */}
+        <div style={{ background: 'white', padding: '10px', borderRadius: '12px', border: `2px solid ${colors.border}`, minHeight: 0, flex: 0 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(75px, 1fr))', gap: '6px', maxHeight: '200px', overflowY: 'auto', paddingRight: '6px' }}>
             {workoutPlan.map((item, idx) => (
               <div
                 key={idx}
                 style={{
-                  padding: '8px 6px',
+                  padding: '9px 7px',
                   background: idx === currentIndex ? colors.primary : colors.light,
                   color: idx === currentIndex ? 'white' : colors.text,
                   borderRadius: '6px',
-                  fontSize: '0.65em',
+                  fontSize: '0.72em',
                   fontWeight: idx === currentIndex ? '700' : '500',
                   border: idx === currentIndex ? `3px solid ${colors.primaryDark}` : `1px solid ${colors.border}`,
                   textAlign: 'center',
