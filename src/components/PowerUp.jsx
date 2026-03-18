@@ -70,8 +70,6 @@ export default function PowerUp() {
   const [skipGoal, setSkipGoal] = useState(null);
   const [showSkipGoalModal, setShowSkipGoalModal] = useState(false);
   const [skipInput, setSkipInput] = useState('');
-  const [showVoiceChoice, setShowVoiceChoice] = useState(false);
-  const [preferredVoice, setPreferredVoice] = useState(null);
   
   const [ageGroup, setAgeGroup] = useState('11-12');
   const [fitnessLevel, setFitnessLevel] = useState('intermediate');
@@ -218,7 +216,8 @@ export default function PowerUp() {
     if (synth.current) {
       synth.current.getVoices();
       synth.current.onvoiceschanged = () => {
-        synth.current.getVoices();
+        const voices = synth.current.getVoices();
+        console.log('Voices loaded on mount:', voices.map(v => v.name));
       };
     }
   }, []);
@@ -226,39 +225,12 @@ export default function PowerUp() {
   const selectAndSpeak = (voices, utterance) => {
     let selectedVoice = null;
     
-    console.log('Preferred voice:', preferredVoice);
-    console.log('Available voices:', voices.map(v => v.name));
+    // Priority: Google US English, then Google UK English Female
+    selectedVoice = voices.find(v => v.name.includes('Google US English')) ||
+                    voices.find(v => v.name.includes('Google UK English Female')) ||
+                    voices[0]; // Fallback to first available
     
-    // PRIORITY: Use preferred voice first
-    if (preferredVoice === 'marcus') {
-      selectedVoice = voices.find(v => v.name.toLowerCase().includes('marcus'));
-      console.log('Looking for Marcus:', selectedVoice);
-    } else if (preferredVoice === 'james') {
-      selectedVoice = voices.find(v => v.name.toLowerCase().includes('james')) ||
-                      voices.find(v => v.name.includes('Neural2-A'));
-      console.log('Looking for James:', selectedVoice);
-    } else if (preferredVoice === 'sophia') {
-      selectedVoice = voices.find(v => v.name.toLowerCase().includes('sophia'));
-      console.log('Looking for Sophia:', selectedVoice);
-    } else if (preferredVoice === 'aurora') {
-      selectedVoice = voices.find(v => v.name.toLowerCase().includes('aurora'));
-      console.log('Looking for Aurora:', selectedVoice);
-    } else if (preferredVoice === 'clara') {
-      selectedVoice = voices.find(v => v.name.toLowerCase().includes('clara'));
-      console.log('Looking for Clara:', selectedVoice);
-    }
-    
-    // Fallback if preferred not found
-    if (!selectedVoice) {
-      console.log('Preferred voice not found, using fallback');
-      selectedVoice = voices.find(v => v.name.toLowerCase().includes('sophia')) ||
-                      voices.find(v => v.name.toLowerCase().includes('aurora')) ||
-                      voices.find(v => v.name.toLowerCase().includes('clara')) ||
-                      voices.find(v => v.name.toLowerCase().includes('female')) ||
-                      voices[0];
-    }
-    
-    console.log('Final selected voice:', selectedVoice?.name);
+    console.log('Selected voice:', selectedVoice?.name);
     
     if (selectedVoice) {
       utterance.voice = selectedVoice;
@@ -272,14 +244,13 @@ export default function PowerUp() {
     
     synth.current.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.9;
+    utterance.rate = 1.0; // Normal speed
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
     
     const voices = synth.current.getVoices();
     
     if (voices.length === 0) {
-      // Voices not loaded, wait for them
       const handler = () => {
         const loadedVoices = synth.current.getVoices();
         if (loadedVoices.length > 0) {
@@ -416,19 +387,19 @@ export default function PowerUp() {
     // Announce "Get ready!" - timer frozen at 5
     speak('Get ready!');
     
-    // The new useEffect will automatically speak "5", "4", "3", "2", "1", "Go!" as countdown decrements
-    // Then announce first exercise after "Go!"
+    // Announce first exercise immediately after "Go!" (no delay)
+    // Use a flag to ensure we only announce once
     setTimeout(() => {
       const firstExercise = workoutPlan[0];
       const exerciseName = exercises[firstExercise.exercise].description;
       
       if (firstExercise.isSkipping) {
         const skipsEst = Math.round((firstExercise.duration / 45) * 105);
-        speak(`${exerciseName}. Try for ${skipsEst} skips.`);
+        speak(`${exerciseName}. ${skipsEst} skips.`);
       } else {
-        speak(`${exerciseName}. Let's go.`);
+        speak(`${exerciseName}.`);
       }
-    }, 7000);
+    }, 6000);
   };
 
   const funPhrases = {
@@ -553,29 +524,19 @@ export default function PowerUp() {
       
       if (nextItem.type === 'transition') {
         const breakPhrase = getRandomPhrase('breakStart');
-        speak(`${breakPhrase} ${nextItem.duration} seconds.`);
+        speak(`${breakPhrase}`);
       } else if (nextItem.type === 'rest') {
         const restPhrase = getRandomPhrase('restStart');
-        speak(`${restPhrase} ${nextItem.duration} seconds.`);
+        speak(`${restPhrase}`);
       } else if (nextItem.type === 'exercise') {
-        const previousExercise = currentIndex > 0 ? workoutPlan[currentIndex - 2]?.exercise : null;
-        const isRepeat = previousExercise === nextItem.exercise;
         const exerciseName = exercises[nextItem.exercise].description;
         
         if (nextItem.isSkipping) {
           const skipsEst = Math.round((nextItem.duration / 45) * 105);
           setEstimatedSkips(skipsEst);
-          if (isRepeat) {
-            speak(`${exerciseName} again. Aim for ${skipsEst} skips.`);
-          } else {
-            speak(`${exerciseName}. Try for ${skipsEst} skips.`);
-          }
+          speak(`${exerciseName}. ${skipsEst} skips.`);
         } else {
-          if (isRepeat) {
-            speak(`${exerciseName} again.`);
-          } else {
-            speak(`${exerciseName}. Let's go.`);
-          }
+          speak(`${exerciseName}.`);
         }
       }
     } else {
@@ -620,7 +581,7 @@ export default function PowerUp() {
           {Object.entries(presets).map(([key, preset]) => {
             const dailyProgress = (skipStats.daily / preset.defaultSkipGoal) * 100;
             return (
-              <div key={key} onClick={() => { setSelectedPreset(key); setSelectedGoal(null); setSelectedExercises([]); if (key === 'matt') { setShowVoiceChoice(true); } else { setShowSkipGoalModal(true); } setSkipInput(preset.defaultSkipGoal.toString()); }} style={{ padding: '20px', background: selectedPreset === key ? colors.primary : 'white', color: selectedPreset === key ? 'white' : colors.text, border: `2px solid ${selectedPreset === key ? colors.primary : colors.border}`, borderRadius: '12px', cursor: 'pointer', ...fontStyle, transition: 'all 0.3s ease' }}>
+              <div key={key} onClick={() => { setSelectedPreset(key); setSelectedGoal(null); setSelectedExercises([]); setShowSkipGoalModal(true); setSkipInput(preset.defaultSkipGoal.toString()); }} style={{ padding: '20px', background: selectedPreset === key ? colors.primary : 'white', color: selectedPreset === key ? 'white' : colors.text, border: `2px solid ${selectedPreset === key ? colors.primary : colors.border}`, borderRadius: '12px', cursor: 'pointer', ...fontStyle, transition: 'all 0.3s ease' }}>
                 <div style={{ fontSize: '2em', marginBottom: '10px' }}>{preset.emoji}</div>
                 <div style={{ fontWeight: '600', fontSize: '1.1em', marginBottom: '6px' }}>{preset.name}</div>
                 <div style={{ fontSize: '0.95em', marginBottom: '8px', fontWeight: '500' }}>{preset.blurb}</div>
@@ -633,44 +594,6 @@ export default function PowerUp() {
             );
           })}
         </div>
-
-        {showVoiceChoice && (
-          <div style={{ position: 'fixed', top: '0', left: '0', right: '0', bottom: '0', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div style={{ background: 'white', padding: '40px', borderRadius: '12px', maxWidth: '480px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', ...fontStyle }}>
-              <h3 style={{ color: colors.primary, marginBottom: '20px', fontSize: '1.4em', fontWeight: '600' }}>Choose Your Coach's Voice</h3>
-              <p style={{ color: colors.text, marginBottom: '30px', fontSize: '0.95em', fontWeight: '500' }}>Which voice would you like for your workout?</p>
-              
-              <div style={{ marginBottom: '25px' }}>
-                <p style={{ color: colors.text, marginBottom: '12px', fontWeight: '600', fontSize: '1em' }}>Male Voices:</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
-                  <button onClick={() => { setPreferredVoice('marcus'); setShowVoiceChoice(false); setShowSkipGoalModal(true); }} style={{ padding: '12px', background: preferredVoice === 'marcus' ? colors.primary : 'white', color: preferredVoice === 'marcus' ? 'white' : colors.text, border: `2px solid ${preferredVoice === 'marcus' ? colors.primary : colors.border}`, borderRadius: '8px', cursor: 'pointer', fontWeight: '600', ...fontStyle, fontSize: '0.95em', transition: 'all 0.2s ease' }}>
-                    Marcus
-                  </button>
-                  <button onClick={() => { setPreferredVoice('james'); setShowVoiceChoice(false); setShowSkipGoalModal(true); }} style={{ padding: '12px', background: preferredVoice === 'james' ? colors.primary : 'white', color: preferredVoice === 'james' ? 'white' : colors.text, border: `2px solid ${preferredVoice === 'james' ? colors.primary : colors.border}`, borderRadius: '8px', cursor: 'pointer', fontWeight: '600', ...fontStyle, fontSize: '0.95em', transition: 'all 0.2s ease' }}>
-                    James
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <p style={{ color: colors.text, marginBottom: '12px', fontWeight: '600', fontSize: '1em' }}>Female Voices:</p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                  <button onClick={() => { setPreferredVoice('sophia'); setShowVoiceChoice(false); setShowSkipGoalModal(true); }} style={{ padding: '12px', background: preferredVoice === 'sophia' ? colors.primary : 'white', color: preferredVoice === 'sophia' ? 'white' : colors.text, border: `2px solid ${preferredVoice === 'sophia' ? colors.primary : colors.border}`, borderRadius: '8px', cursor: 'pointer', fontWeight: '600', ...fontStyle, fontSize: '0.9em', transition: 'all 0.2s ease' }}>
-                    Sophia
-                  </button>
-                  <button onClick={() => { setPreferredVoice('aurora'); setShowVoiceChoice(false); setShowSkipGoalModal(true); }} style={{ padding: '12px', background: preferredVoice === 'aurora' ? colors.primary : 'white', color: preferredVoice === 'aurora' ? 'white' : colors.text, border: `2px solid ${preferredVoice === 'aurora' ? colors.primary : colors.border}`, borderRadius: '8px', cursor: 'pointer', fontWeight: '600', ...fontStyle, fontSize: '0.9em', transition: 'all 0.2s ease' }}>
-                    Aurora
-                  </button>
-                  <button onClick={() => { setPreferredVoice('clara'); setShowVoiceChoice(false); setShowSkipGoalModal(true); }} style={{ padding: '12px', background: preferredVoice === 'clara' ? colors.primary : 'white', color: preferredVoice === 'clara' ? 'white' : colors.text, border: `2px solid ${preferredVoice === 'clara' ? colors.primary : colors.border}`, borderRadius: '8px', cursor: 'pointer', fontWeight: '600', ...fontStyle, fontSize: '0.9em', transition: 'all 0.2s ease' }}>
-                    Clara
-                  </button>
-                </div>
-              </div>
-              
-              <button onClick={() => { setShowVoiceChoice(false); setSelectedPreset(null); }} style={{ width: '100%', marginTop: '25px', padding: '12px', background: colors.border, color: colors.text, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', ...fontStyle, fontSize: '0.95em' }}>Back</button>
-            </div>
-          </div>
-        )}
 
         {showSkipGoalModal && (
           <div style={{ position: 'fixed', top: '0', left: '0', right: '0', bottom: '0', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
