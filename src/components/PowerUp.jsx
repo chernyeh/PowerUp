@@ -4,8 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, StopCircle, Play as PlayIcon } from 'lucide-react';
 
 const fontStyle = {
-  fontFamily: '"Fredoka", "Comfortaa", sans-serif',
-  letterSpacing: '0.5px',
+  fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  letterSpacing: '0.3px',
 };
 
 const colors = {
@@ -84,10 +84,8 @@ export default function PowerUp() {
   const [isPaused, setIsPaused] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [estimatedSkips, setEstimatedSkips] = useState(0);
-  const [balanceCountdown, setBalanceCountdown] = useState(null);
   
   const synth = useRef(null);
-  const balanceAnnounceRef = useRef(false);
 
   const [skipStats, setSkipStats] = useState({
     daily: 0,
@@ -120,9 +118,34 @@ export default function PowerUp() {
     }
   }, []);
 
+  useEffect(() => {
+    let interval;
+    if (countdown > 0) {
+      interval = setInterval(() => {
+        setCountdown((c) => c - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [countdown]);
+
+  useEffect(() => {
+    let interval;
+    if (isRunning && !isPaused && timeLeft > 0 && countdown === 0) {
+      interval = setInterval(() => {
+        setTimeLeft((t) => {
+          if (t <= 1) {
+            moveToNextExercise();
+            return 0;
+          }
+          return t - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isRunning, isPaused, timeLeft, currentIndex, workoutPlan, countdown]);
+
   const getCalorieContext = (calories) => {
-    if (calories < 30) return `~${Math.round(calories / 3.5)} almonds`;
-    if (calories < 50) return '1 small fruit';
+    if (calories < 30) return '~1 apple';
     if (calories < 80) return '1 ice lolly';
     if (calories < 120) return '1 scoop ice cream';
     if (calories < 160) return '1 chocolate bar';
@@ -140,12 +163,7 @@ export default function PowerUp() {
     const durationMinutes = durationSeconds / 60;
     
     const ageFactors = {
-      '11-12': 1.0,
-      '13-17': 0.98,
-      '18-25': 0.96,
-      '26-35': 0.94,
-      '36-50': 0.92,
-      '50+': 0.88,
+      '11-12': 1.0, '13-17': 0.98, '18-25': 0.96, '26-35': 0.94, '36-50': 0.92, '50+': 0.88,
     };
     const ageFactor = ageFactors[ageLvl] || 0.92;
     
@@ -179,25 +197,9 @@ export default function PowerUp() {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.9;
       utterance.pitch = 1.0;
-      
       const voices = synth.current.getVoices();
-      let selectedVoice = voices.find(v => 
-        v.name.includes('Sophia') || 
-        v.name.includes('Google US English Female') ||
-        v.name.includes('Victoria') ||
-        v.name.includes('Samantha')
-      );
-      
-      if (!selectedVoice) {
-        selectedVoice = voices.find(v => 
-          v.name.includes('female') || v.name.includes('Female')
-        );
-      }
-      
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-      }
-      
+      let selectedVoice = voices.find(v => v.name.includes('female') || v.name.includes('Female'));
+      if (selectedVoice) utterance.voice = selectedVoice;
       synth.current.speak(utterance);
     }
   };
@@ -312,7 +314,6 @@ export default function PowerUp() {
 
     setWorkoutPlan(plan);
     setCurrentIndex(0);
-    setTimeLeft(45);
     setCountdown(5);
     setStage('prep');
   };
@@ -335,37 +336,66 @@ export default function PowerUp() {
     }, 5100);
   };
 
+  const moveToNextExercise = () => {
+    if (currentIndex < workoutPlan.length - 1) {
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      const nextItem = workoutPlan[nextIndex];
+      setTimeLeft(nextItem.duration);
+      
+      if (nextItem.type === 'exercise' && nextItem.isSkipping) {
+        const skipsEst = Math.round((nextItem.duration / 45) * 105);
+        setEstimatedSkips(skipsEst);
+        speak(`Next: ${exercises[nextItem.exercise].description}`);
+      }
+    } else {
+      if (skipGoal) {
+        setSkipStats(prev => ({
+          ...prev,
+          daily: prev.daily + Math.round(estimatedSkips),
+          weekly: prev.weekly + Math.round(estimatedSkips),
+          monthly: prev.monthly + Math.round(estimatedSkips),
+          total: prev.total + Math.round(estimatedSkips),
+        }));
+      }
+      
+      setStage('results');
+      setIsRunning(false);
+      speak('Amazing! You did it!');
+    }
+  };
+
   // CONFIG SCREEN
   if (stage === 'config') {
     return (
       <div style={{ padding: '50px 40px', ...fontStyle, maxWidth: '900px', margin: '0 auto', minHeight: '100vh', background: colors.light }}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');`}</style>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');`}</style>
 
-        <h1 style={{ color: colors.primary, marginBottom: '5px', fontSize: '3.8em', fontWeight: '700' }}>PowerUp</h1>
-        <p style={{ color: colors.textSecondary, fontSize: '1.3em', fontWeight: '500', marginBottom: '40px' }}>Your Fitness Champion!</p>
+        <h1 style={{ color: colors.primary, marginBottom: '5px', fontSize: '3.2em', fontWeight: '600', ...fontStyle }}>PowerUp</h1>
+        <p style={{ color: colors.textSecondary, fontSize: '1.2em', fontWeight: '500', marginBottom: '40px', ...fontStyle }}>Your Fitness Champion</p>
 
-        <div style={{ marginBottom: '40px', padding: '20px', background: 'white', borderRadius: '16px', border: `3px solid ${colors.primary}` }}>
+        <div style={{ marginBottom: '40px', padding: '20px', background: 'white', borderRadius: '12px', border: `2px solid ${colors.primary}` }}>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             {[15, 20, 25, 30, 35, 40].map(mins => (
-              <button key={mins} onClick={() => setDuration(mins)} style={{ padding: '10px 16px', background: duration === mins ? colors.primary : 'white', color: duration === mins ? 'white' : colors.text, border: `2px solid ${duration === mins ? colors.primary : colors.border}`, borderRadius: '10px', cursor: 'pointer', fontWeight: '700', ...fontStyle, fontSize: '1.05em', transition: 'all 0.2s ease' }}>
+              <button key={mins} onClick={() => setDuration(mins)} style={{ padding: '10px 16px', background: duration === mins ? colors.primary : 'white', color: duration === mins ? 'white' : colors.text, border: `2px solid ${duration === mins ? colors.primary : colors.border}`, borderRadius: '8px', cursor: 'pointer', fontWeight: '500', ...fontStyle, fontSize: '0.95em', transition: 'all 0.2s ease' }}>
                 {mins}m
               </button>
             ))}
           </div>
         </div>
 
-        <h2 style={{ color: colors.text, marginBottom: '20px', fontSize: '1.6em', fontWeight: '600' }}>⭐ Saved Workouts</h2>
+        <h2 style={{ color: colors.text, marginBottom: '20px', fontSize: '1.4em', fontWeight: '600', ...fontStyle }}>Saved Workouts</h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px', marginBottom: '50px' }}>
           {Object.entries(presets).map(([key, preset]) => {
             const dailyProgress = (skipStats.daily / preset.defaultSkipGoal) * 100;
             return (
-              <div key={key} onClick={() => { setSelectedPreset(key); setSelectedGoal(null); setSelectedExercises([]); setShowSkipGoalModal(true); setSkipInput(preset.defaultSkipGoal.toString()); }} style={{ padding: '25px', background: selectedPreset === key ? colors.primary : 'white', color: selectedPreset === key ? 'white' : colors.text, border: `3px solid ${selectedPreset === key ? colors.primary : colors.border}`, borderRadius: '16px', cursor: 'pointer', ...fontStyle, transition: 'all 0.3s ease' }}>
-                <div style={{ fontSize: '2.5em', marginBottom: '12px' }}>{preset.emoji}</div>
-                <div style={{ fontWeight: '700', fontSize: '1.25em', marginBottom: '8px' }}>{preset.name}</div>
-                <div style={{ fontSize: '1em', marginBottom: '8px', fontWeight: '500' }}>{preset.blurb}</div>
-                <div style={{ fontSize: '0.9em', opacity: 0.85, marginBottom: '12px', fontStyle: 'italic' }}>{preset.exercises}</div>
-                <div style={{ fontSize: '0.9em', opacity: 0.8, marginBottom: '10px', fontWeight: '500' }}>🎯 Today: {skipStats.daily}/{preset.defaultSkipGoal}</div>
-                <div style={{ background: colors.border, height: '10px', borderRadius: '6px', overflow: 'hidden' }}>
+              <div key={key} onClick={() => { setSelectedPreset(key); setSelectedGoal(null); setSelectedExercises([]); setShowSkipGoalModal(true); setSkipInput(preset.defaultSkipGoal.toString()); }} style={{ padding: '20px', background: selectedPreset === key ? colors.primary : 'white', color: selectedPreset === key ? 'white' : colors.text, border: `2px solid ${selectedPreset === key ? colors.primary : colors.border}`, borderRadius: '12px', cursor: 'pointer', ...fontStyle, transition: 'all 0.3s ease' }}>
+                <div style={{ fontSize: '2em', marginBottom: '10px' }}>{preset.emoji}</div>
+                <div style={{ fontWeight: '600', fontSize: '1.1em', marginBottom: '6px' }}>{preset.name}</div>
+                <div style={{ fontSize: '0.95em', marginBottom: '8px', fontWeight: '500' }}>{preset.blurb}</div>
+                <div style={{ fontSize: '0.85em', opacity: 0.85, marginBottom: '10px' }}>{preset.exercises}</div>
+                <div style={{ fontSize: '0.85em', opacity: 0.8, marginBottom: '8px' }}>Today: {skipStats.daily}/{preset.defaultSkipGoal}</div>
+                <div style={{ background: colors.border, height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
                   <div style={{ background: selectedPreset === key ? 'white' : colors.primary, height: '100%', width: `${Math.min(dailyProgress, 100)}%`, transition: 'width 0.3s ease' }} />
                 </div>
               </div>
@@ -375,60 +405,218 @@ export default function PowerUp() {
 
         {showSkipGoalModal && (
           <div style={{ position: 'fixed', top: '0', left: '0', right: '0', bottom: '0', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div style={{ background: 'white', padding: '40px', borderRadius: '20px', maxWidth: '450px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto', ...fontStyle }}>
-              <h3 style={{ color: colors.primary, marginBottom: '20px', fontSize: '1.6em', fontWeight: '700' }}>⛹️ Skip Goal</h3>
-              <p style={{ color: colors.text, marginBottom: '15px', fontSize: '1.05em', fontWeight: '500' }}>How many skips today?</p>
-              <input type="number" value={skipInput} onChange={(e) => setSkipInput(e.target.value)} style={{ width: '100%', padding: '14px', border: `2px solid ${colors.border}`, borderRadius: '10px', fontSize: '1.2em', marginBottom: '20px', boxSizing: 'border-box', color: colors.text, ...fontStyle, fontWeight: '600' }} />
+            <div style={{ background: 'white', padding: '40px', borderRadius: '12px', maxWidth: '420px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', ...fontStyle }}>
+              <h3 style={{ color: colors.primary, marginBottom: '20px', fontSize: '1.4em', fontWeight: '600' }}>Skip Goal</h3>
+              <p style={{ color: colors.text, marginBottom: '15px', fontSize: '0.95em', fontWeight: '500' }}>How many skips today?</p>
+              <input type="number" value={skipInput} onChange={(e) => setSkipInput(e.target.value)} style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '6px', fontSize: '1em', marginBottom: '20px', boxSizing: 'border-box', color: colors.text, ...fontStyle, fontWeight: '400' }} />
               <style>{`input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; } input[type="number"] { -moz-appearance: textfield; }`}</style>
               
-              <div style={{ background: colors.light, padding: '15px', borderRadius: '12px', marginBottom: '20px' }}>
-                <div style={{ color: colors.text, fontSize: '0.95em', marginBottom: '10px', fontWeight: '600' }}>🔥 Skipping Calories:</div>
-                <div style={{ color: colors.primary, fontSize: '1.8em', fontWeight: '700', marginBottom: '8px' }}>~{calculateSkipsCalories(parseInt(skipInput || 250))}</div>
-                <div style={{ color: colors.text, fontSize: '0.95em' }}>≈ {getCalorieContext(calculateSkipsCalories(parseInt(skipInput || 250)))}</div>
+              <div style={{ background: colors.light, padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+                <div style={{ color: colors.text, fontSize: '0.9em', marginBottom: '8px', fontWeight: '500' }}>Skipping Calories:</div>
+                <div style={{ color: colors.primary, fontSize: '1.6em', fontWeight: '600', marginBottom: '6px' }}>~{calculateSkipsCalories(parseInt(skipInput || 250))}</div>
+                <div style={{ color: colors.text, fontSize: '0.9em' }}>≈ {getCalorieContext(calculateSkipsCalories(parseInt(skipInput || 250)))}</div>
               </div>
 
-              <div style={{ background: colors.light, padding: '15px', borderRadius: '12px', marginBottom: '20px' }}>
-                <div style={{ color: colors.text, fontSize: '0.95em', marginBottom: '10px', fontWeight: '600' }}>💪 Total Workout:</div>
-                <div style={{ color: colors.primary, fontSize: '1.6em', fontWeight: '700', marginBottom: '8px' }}>~260 cal</div>
-                <div style={{ color: colors.text, fontSize: '0.95em' }}>≈ {getCalorieContext(260)}</div>
+              <div style={{ background: colors.light, padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+                <div style={{ color: colors.text, fontSize: '0.9em', marginBottom: '8px', fontWeight: '500' }}>Total Workout Estimate:</div>
+                <div style={{ color: colors.primary, fontSize: '1.6em', fontWeight: '600', marginBottom: '6px' }}>~260 cal</div>
+                <div style={{ color: colors.text, fontSize: '0.9em' }}>≈ 1 slice shortcake</div>
               </div>
               
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => { setShowSkipGoalModal(false); setSelectedPreset(null); }} style={{ flex: 1, padding: '12px', background: colors.border, color: colors.text, border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', ...fontStyle, fontSize: '1.05em' }}>Cancel</button>
-                <button onClick={() => { setSkipGoal(parseInt(skipInput || 250)); setShowSkipGoalModal(false); generatePlan(); }} style={{ flex: 1, padding: '12px', background: colors.primary, color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', ...fontStyle, fontSize: '1.05em' }}>Let's Go!</button>
+                <button onClick={() => { setShowSkipGoalModal(false); setSelectedPreset(null); }} style={{ flex: 1, padding: '12px', background: colors.border, color: colors.text, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', ...fontStyle, fontSize: '0.95em' }}>Cancel</button>
+                <button onClick={() => { setSkipGoal(parseInt(skipInput || 250)); setShowSkipGoalModal(false); generatePlan(); }} style={{ flex: 1, padding: '12px', background: colors.primary, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', ...fontStyle, fontSize: '0.95em' }}>Continue</button>
               </div>
             </div>
           </div>
         )}
 
-        <h2 style={{ color: colors.text, marginBottom: '20px', fontSize: '1.6em', fontWeight: '600' }}>🎯 Quick Goals</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '50px' }}>
+        <h2 style={{ color: colors.text, marginBottom: '20px', fontSize: '1.4em', fontWeight: '600', ...fontStyle }}>Quick Goals</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '50px' }}>
           {Object.keys(goals).map((goal) => (
-            <button key={goal} onClick={() => { setSelectedGoal(goal); setSelectedExercises([]); setSelectedPreset(null); }} style={{ padding: '18px', background: selectedGoal === goal ? colors.primary : 'white', color: selectedGoal === goal ? 'white' : colors.text, border: `2px solid ${selectedGoal === goal ? colors.primary : colors.border}`, borderRadius: '12px', cursor: 'pointer', ...fontStyle, fontSize: '1em', fontWeight: selectedGoal === goal ? 'bold' : '600', transition: 'all 0.3s ease', textAlign: 'center', minHeight: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-              <div style={{ fontSize: '2em', marginBottom: '8px' }}>
-                {goal === 'general' && '⭐'}
-                {goal === 'core' && '💪'}
-                {goal === 'cardio' && '🏃'}
-                {goal === 'strength' && '💥'}
-                {goal === 'balance' && '⚖️'}
-                {goal === 'hiit' && '⚡'}
+            <button key={goal} onClick={() => { setSelectedGoal(goal); setSelectedExercises([]); setSelectedPreset(null); }} style={{ padding: '16px', background: selectedGoal === goal ? colors.primary : 'white', color: selectedGoal === goal ? 'white' : colors.text, border: `2px solid ${selectedGoal === goal ? colors.primary : colors.border}`, borderRadius: '8px', cursor: 'pointer', ...fontStyle, fontSize: '0.9em', fontWeight: selectedGoal === goal ? '600' : '500', transition: 'all 0.3s ease', textAlign: 'center', minHeight: '100px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <div style={{ fontSize: '1.8em', marginBottom: '6px' }}>
+                {goal === 'general' && '⭐'}{goal === 'core' && '💪'}{goal === 'cardio' && '🏃'}{goal === 'strength' && '💥'}{goal === 'balance' && '⚖️'}{goal === 'hiit' && '⚡'}
               </div>
-              <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '1.15em' }}>
-                {goal.charAt(0).toUpperCase() + goal.slice(1)}
-              </div>
+              <div>{goal.charAt(0).toUpperCase() + goal.slice(1)}</div>
             </button>
           ))}
         </div>
 
         <div style={{ marginBottom: '30px' }}>
-          <button onClick={() => generatePlan()} style={{ width: '100%', padding: '16px', background: colors.primary, color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', ...fontStyle, fontSize: '1.2em', transition: 'all 0.3s ease' }} >
-            📋 Prepare Workout
+          <button onClick={() => generatePlan()} style={{ width: '100%', padding: '14px', background: colors.primary, color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', ...fontStyle, fontSize: '1em', transition: 'all 0.3s ease' }}>
+            Prepare Workout
           </button>
         </div>
       </div>
     );
   }
 
-  // Placeholder for other screens - will add if needed
-  return <div style={{...fontStyle}}>Loading...</div>;
+  // PREP SCREEN
+  if (stage === 'prep') {
+    const estimatedWorkoutCalories = calculateWorkoutCalories();
+    
+    return (
+      <div style={{ padding: '40px', ...fontStyle, maxWidth: '700px', margin: '0 auto', minHeight: '100vh', background: colors.light, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+        <h2 style={{ color: colors.primary, marginBottom: '20px', fontSize: '2em', fontWeight: '600' }}>Your Workout Plan</h2>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '25px' }}>
+          <button onClick={() => startWorkout()} style={{ width: '100%', padding: '12px', fontSize: '1em', background: colors.primary, color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', ...fontStyle, transition: 'all 0.3s ease' }}>
+            Start Workout
+          </button>
+          <button onClick={() => { setStage('config'); setWorkoutPlan([]); setSelectedGoal(null); setSelectedExercises([]); setSelectedPreset(null); setSkipGoal(null); }} style={{ width: '100%', padding: '12px', fontSize: '1em', background: colors.border, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: '8px', cursor: 'pointer', fontWeight: '600', ...fontStyle, transition: 'all 0.3s ease' }}>
+            Back
+          </button>
+        </div>
+
+        <div style={{ background: colors.primary, color: 'white', padding: '18px', borderRadius: '8px', marginBottom: '25px', textAlign: 'center', ...fontStyle }}>
+          <div style={{ fontSize: '0.9em', marginBottom: '6px', opacity: 0.9, fontWeight: '500' }}>Total Calories</div>
+          <div style={{ fontSize: '2.2em', fontWeight: '600', marginBottom: '6px' }}>~{estimatedWorkoutCalories}</div>
+          <div style={{ fontSize: '0.9em', opacity: 0.95, fontWeight: '500' }}>≈ {getCalorieContext(estimatedWorkoutCalories)}</div>
+        </div>
+
+        <div style={{ background: 'white', padding: '12px', borderRadius: '8px', border: `1px solid ${colors.border}` }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '6px' }}>
+            {workoutPlan.map((item, idx) => (
+              <div key={idx} style={{ padding: '8px', background: colors.light, border: `1px solid ${colors.border}`, borderRadius: '6px', color: colors.text, fontWeight: item.type === 'exercise' ? '600' : '400', fontSize: '0.75em', textAlign: 'center', lineHeight: '1.3', ...fontStyle }}>
+                {item.type === 'exercise' ? (
+                  <>
+                    <div>{exercises[item.exercise].description}</div>
+                    <div style={{ fontSize: '0.7em', opacity: 0.7, marginTop: '3px', fontWeight: '500' }}>{item.duration}s</div>
+                  </>
+                ) : item.type === 'rest' ? (
+                  <>
+                    <div>Rest</div>
+                    <div style={{ fontSize: '0.7em', opacity: 0.7, marginTop: '3px', fontWeight: '500' }}>{item.duration}s</div>
+                  </>
+                ) : (
+                  <>
+                    <div>Break</div>
+                    <div style={{ fontSize: '0.7em', opacity: 0.7, marginTop: '3px', fontWeight: '500' }}>{item.duration}s</div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // WORKOUT SCREEN
+  if (stage === 'workout') {
+    const current = workoutPlan[currentIndex];
+    const exerciseData = current?.type === 'exercise' ? exercises[current.exercise] : null;
+
+    return (
+      <div style={{ padding: '40px', ...fontStyle, minHeight: '100vh', background: colors.light, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div>
+          <h2 style={{ color: colors.primary, marginBottom: '20px', ...fontStyle, fontSize: '1.8em', fontWeight: '600' }}>
+            {countdown > 0 ? 'Get Ready!' : current?.type === 'rest' ? 'Rest Time' : exerciseData?.description}
+          </h2>
+          <div style={{ fontSize: countdown > 0 ? '20em' : '14em', color: colors.primary, marginBottom: '20px', fontWeight: '600', fontFamily: 'monospace', lineHeight: '1' }}>
+            {countdown > 0 ? countdown : `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`}
+          </div>
+          
+          {current?.isSkipping && !countdown && (
+            <p style={{ color: colors.primary, fontSize: '1em', fontWeight: '600', marginBottom: '20px', ...fontStyle }}>
+              Est. Skips: {estimatedSkips}
+            </p>
+          )}
+        </div>
+
+        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+          {!isRunning ? (
+            <button onClick={() => { setIsRunning(true); setCountdown(0); setIsPaused(false); }} style={{ padding: '12px 20px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95em', ...fontStyle }}>
+              <PlayIcon size={16} style={{ display: 'inline', marginRight: '6px' }} /> Play
+            </button>
+          ) : (
+            <>
+              <button onClick={() => setIsPaused(!isPaused)} style={{ padding: '12px 20px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95em', ...fontStyle }}>
+                <Pause size={16} style={{ display: 'inline', marginRight: '6px' }} /> {isPaused ? 'Resume' : 'Pause'}
+              </button>
+              <button onClick={() => { setIsRunning(false); setStage('config'); setWorkoutPlan([]); }} style={{ padding: '12px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95em', ...fontStyle }}>
+                <StopCircle size={16} style={{ display: 'inline', marginRight: '6px' }} /> Stop
+              </button>
+            </>
+          )}
+        </div>
+
+        <p style={{ color: colors.text, marginBottom: '15px', fontSize: '0.9em', ...fontStyle, fontWeight: '500' }}>
+          Exercise {currentIndex + 1} of {workoutPlan.length}
+        </p>
+
+        {exerciseData && (
+          <div style={{ background: 'white', padding: '16px', borderRadius: '8px', marginBottom: '15px', border: `1px solid ${colors.border}` }}>
+            {exerciseData.tips.split('. ').map((sentence, idx) => (
+              <p key={idx} style={{ color: colors.text, fontSize: '0.9em', marginBottom: idx === exerciseData.tips.split('. ').length - 1 ? '0' : '8px', lineHeight: '1.5', fontWeight: '400', ...fontStyle }}>
+                {sentence}{sentence.endsWith('.') ? '' : '.'}
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // RESULTS SCREEN
+  if (stage === 'results') {
+    const totalWorkoutCalories = calculateWorkoutCalories();
+    
+    return (
+      <div style={{ padding: '50px 40px', textAlign: 'center', ...fontStyle, minHeight: '100vh', background: colors.light }}>
+        <h1 style={{ fontSize: '2.8em', color: colors.primary, marginBottom: '20px', fontWeight: '600' }}>Awesome!</h1>
+        <p style={{ fontSize: '1.1em', color: colors.text, marginBottom: '40px', fontWeight: '500' }}>You crushed {workoutPlan.length} exercises!</p>
+        
+        {skipGoal && (
+          <div style={{ background: 'white', padding: '25px', borderRadius: '12px', marginBottom: '25px', border: `2px solid ${colors.primary}` }}>
+            <h2 style={{ color: colors.primary, marginBottom: '15px', fontSize: '1.3em', fontWeight: '600' }}>Skips</h2>
+            <p style={{ fontSize: '1.8em', color: colors.primary, fontWeight: '600', marginBottom: '8px' }}>{Math.round(estimatedSkips)}</p>
+            <p style={{ color: colors.text, marginBottom: '12px', fontSize: '0.95em', fontWeight: '500' }}>Goal: {skipGoal}</p>
+            <p style={{ color: colors.text, fontSize: '1em', fontWeight: '600' }}>
+              Today's Total: {skipStats.daily}/{skipGoal} {skipStats.daily >= skipGoal ? '✓' : ''}
+            </p>
+          </div>
+        )}
+
+        <div style={{ background: 'white', padding: '25px', borderRadius: '12px', marginBottom: '25px', border: `2px solid ${colors.primary}` }}>
+          <h3 style={{ color: colors.primary, marginBottom: '15px', fontSize: '1.3em', fontWeight: '600' }}>Calories Burned</h3>
+          <div style={{ fontSize: '2.2em', color: colors.primary, fontWeight: '600', marginBottom: '12px' }}>
+            ~{totalWorkoutCalories}
+          </div>
+          <div style={{ color: colors.text, fontSize: '1em', fontWeight: '500' }}>
+            ≈ {getCalorieContext(totalWorkoutCalories)}
+          </div>
+        </div>
+
+        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', marginBottom: '25px', border: `1px solid ${colors.border}` }}>
+          <h3 style={{ color: colors.primary, marginBottom: '15px', fontSize: '1.1em', fontWeight: '600' }}>Skip Stats</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
+            <div>
+              <p style={{ color: colors.textSecondary, fontSize: '0.85em', marginBottom: '4px', fontWeight: '500' }}>Today</p>
+              <p style={{ color: colors.primary, fontSize: '1.2em', fontWeight: '600' }}>{skipStats.daily}</p>
+            </div>
+            <div>
+              <p style={{ color: colors.textSecondary, fontSize: '0.85em', marginBottom: '4px', fontWeight: '500' }}>Week</p>
+              <p style={{ color: colors.primary, fontSize: '1.2em', fontWeight: '600' }}>{skipStats.weekly}</p>
+            </div>
+            <div>
+              <p style={{ color: colors.textSecondary, fontSize: '0.85em', marginBottom: '4px', fontWeight: '500' }}>Month</p>
+              <p style={{ color: colors.primary, fontSize: '1.2em', fontWeight: '600' }}>{skipStats.monthly}</p>
+            </div>
+            <div>
+              <p style={{ color: colors.textSecondary, fontSize: '0.85em', marginBottom: '4px', fontWeight: '500' }}>Total</p>
+              <p style={{ color: colors.primary, fontSize: '1.2em', fontWeight: '600' }}>{skipStats.total}</p>
+            </div>
+          </div>
+        </div>
+
+        <button onClick={() => { setStage('config'); setWorkoutPlan([]); setSelectedGoal(null); setSelectedExercises([]); setSelectedPreset(null); setSkipGoal(null); }} style={{ padding: '12px 32px', fontSize: '1em', background: colors.primary, color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', ...fontStyle }}>
+          Next Workout
+        </button>
+      </div>
+    );
+  }
+
+  return null;
 }
