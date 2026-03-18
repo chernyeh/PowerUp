@@ -209,36 +209,51 @@ export default function PowerUp() {
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
       
-      const voices = synth.current.getVoices();
-      let selectedVoice = null;
+      // Get voices and wait for them to load if needed
+      let voices = synth.current.getVoices();
       
-      // If voice preference is set, use it
-      if (preferredVoice) {
-        if (preferredVoice === 'marcus') {
-          selectedVoice = voices.find(v => v.name.includes('Marcus'));
-        } else if (preferredVoice === 'james') {
-          selectedVoice = voices.find(v => v.name.includes('Neural2-A') || v.name.includes('James'));
-        } else if (preferredVoice === 'sophia') {
-          selectedVoice = voices.find(v => v.name.includes('Sophia'));
-        } else if (preferredVoice === 'aurora') {
-          selectedVoice = voices.find(v => v.name.includes('Aurora'));
-        } else if (preferredVoice === 'clara') {
-          selectedVoice = voices.find(v => v.name.includes('Clara'));
-        }
+      // If no voices loaded yet, wait and try again
+      if (voices.length === 0) {
+        synth.current.onvoiceschanged = () => {
+          voices = synth.current.getVoices();
+          selectAndSpeak(voices, utterance);
+        };
+      } else {
+        selectAndSpeak(voices, utterance);
       }
-      
-      // Fallback if preferred voice not found
-      if (!selectedVoice) {
-        selectedVoice = voices.find(v => 
-          v.name.includes('Sophia') ||
-          v.name.includes('Aurora') ||
-          v.name.includes('Google US English Female')
-        );
-      }
-      
-      if (selectedVoice) utterance.voice = selectedVoice;
-      synth.current.speak(utterance);
     }
+  };
+
+  const selectAndSpeak = (voices, utterance) => {
+    let selectedVoice = null;
+    
+    // If voice preference is set, use it
+    if (preferredVoice) {
+      if (preferredVoice === 'marcus') {
+        selectedVoice = voices.find(v => v.name.includes('Marcus'));
+      } else if (preferredVoice === 'james') {
+        selectedVoice = voices.find(v => v.name.includes('Neural2-A') || v.name.includes('James'));
+      } else if (preferredVoice === 'sophia') {
+        selectedVoice = voices.find(v => v.name.includes('Sophia'));
+      } else if (preferredVoice === 'aurora') {
+        selectedVoice = voices.find(v => v.name.includes('Aurora'));
+      } else if (preferredVoice === 'clara') {
+        selectedVoice = voices.find(v => v.name.includes('Clara'));
+      }
+    }
+    
+    // Fallback if preferred voice not found
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v => 
+        v.name.includes('Sophia') ||
+        v.name.includes('Aurora') ||
+        v.name.includes('Clara') ||
+        v.name.includes('Google US English Female')
+      );
+    }
+    
+    if (selectedVoice) utterance.voice = selectedVoice;
+    synth.current.speak(utterance);
   };
 
   const generatePlan = () => {
@@ -359,9 +374,22 @@ export default function PowerUp() {
     setStage('workout');
     setCountdown(5);
     setTimeLeft(45);
-    speak('Alright, let\'s do this! Starting in 5, 4, 3, 2, 1. Go go go!');
+    setIsRunning(true);
+    
+    // Wait for voice to load, then announce countdown synchronized with timer
     setTimeout(() => {
-      setIsRunning(true);
+      speak('Get ready!');
+    }, 100);
+    
+    setTimeout(() => speak('5'), 1000);
+    setTimeout(() => speak('4'), 2000);
+    setTimeout(() => speak('3'), 3000);
+    setTimeout(() => speak('2'), 4000);
+    setTimeout(() => speak('1'), 5000);
+    setTimeout(() => speak('Go!'), 6000);
+    
+    // Start the actual workout after countdown
+    setTimeout(() => {
       setCountdown(0);
       const firstExercise = workoutPlan[0];
       setTimeLeft(firstExercise.duration);
@@ -370,7 +398,7 @@ export default function PowerUp() {
         const skipsEst = Math.round((firstExercise.duration / 45) * 105);
         setEstimatedSkips(skipsEst);
       }
-    }, 5100);
+    }, 6500);
   };
 
   const funPhrases = {
