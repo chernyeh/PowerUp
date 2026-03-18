@@ -765,9 +765,43 @@ export default function PowerUp() {
           )}
         </div>
 
-        <p style={{ color: colors.text, marginBottom: '0', fontSize: '0.9em', ...fontStyle, fontWeight: '500' }}>
+        <p style={{ color: colors.text, marginBottom: '20px', fontSize: '0.9em', ...fontStyle, fontWeight: '500' }}>
           Exercise {currentIndex + 1} of {workoutPlan.length}
         </p>
+
+        {/* Workout Plan Progress List */}
+        <div style={{ background: 'white', padding: '15px', borderRadius: '8px', border: `1px solid ${colors.border}`, maxHeight: '200px', overflowY: 'auto', marginBottom: '20px' }}>
+          {workoutPlan.map((item, idx) => (
+            <div
+              key={idx}
+              style={{
+                padding: '10px',
+                marginBottom: idx === workoutPlan.length - 1 ? '0' : '8px',
+                background: idx === currentIndex ? colors.primary : 'transparent',
+                color: idx === currentIndex ? 'white' : colors.text,
+                borderRadius: '6px',
+                fontSize: '0.85em',
+                fontWeight: idx === currentIndex ? '600' : '400',
+                ...fontStyle,
+              }}
+            >
+              {item.type === 'exercise' ? (
+                <span>
+                  {item.isSkipping ? `Skipping ${item.duration}s` : `${exercises[item.exercise]?.description} ${item.duration}s`}
+                </span>
+              ) : item.type === 'rest' ? (
+                <span style={{ fontStyle: 'italic', opacity: 0.8 }}>Rest {item.duration}s</span>
+              ) : (
+                <span style={{ fontStyle: 'italic', opacity: 0.8 }}>Break {item.duration}s</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p style={{ color: colors.text, marginBottom: '0', fontSize: '0.9em', ...fontStyle, fontWeight: '500' }}>
+        Exercise {currentIndex + 1} of {workoutPlan.length}
+      </p>
       </div>
     );
   }
