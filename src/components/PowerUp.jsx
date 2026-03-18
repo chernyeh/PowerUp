@@ -149,11 +149,53 @@ export default function PowerUp() {
     'Don\'t give up! You\'re so close!',
   ];
 
-  const getRandomEncouragement = () => {
-    return encouragingPhrases[Math.floor(Math.random() * encouragingPhrases.length)];
+  // CALORIE CONTEXT - What does X calories mean?
+  const getCalorieContext = (calories) => {
+    if (calories < 30) return `~${Math.round(calories / 3.5)} almonds`;
+    if (calories < 60) return `~${Math.round(calories / 25)} apple`;
+    if (calories < 100) return `~${Math.round(calories / 50)} banana`;
+    if (calories < 150) return `~${Math.round(calories / 70)} slice of bread`;
+    if (calories < 250) return `~${Math.round(calories / 150)} small snack`;
+    return `~${Math.round(calories / 250)} meal`;
   };
 
-  // PRESETS
+  // CALORIE BURN CALCULATOR
+  // Based on age, fitness level, and exercise type
+  const getCaloriesBurned = (exerciseKey, durationSeconds, ageGroup, fitnessLvl) => {
+    const exerciseData = exercises[exerciseKey];
+    const caloriesPerMinute = exerciseData.caloriesPerMin[fitnessLvl];
+    const durationMinutes = durationSeconds / 60;
+    
+    // Age factor (metabolism decreases with age)
+    const ageFactors = {
+      '11-12': 1.0,
+      '13-17': 0.98,
+      '18-25': 0.96,
+      '26-35': 0.94,
+      '36-50': 0.92,
+      '50+': 0.88,
+    };
+    const ageFactor = ageFactors[ageGroup] || 0.92;
+    
+    return Math.round(caloriesPerMinute * durationMinutes * ageFactor);
+  };
+
+  // Calculate total workout calorie burn
+  const calculateWorkoutCalories = () => {
+    if (!workoutPlan.length) return 0;
+    let totalCalories = 0;
+    
+    workoutPlan.forEach(item => {
+      if (item.type === 'exercise') {
+        const cals = getCaloriesBurned(item.exercise, item.duration, ageGroup, fitnessLevel);
+        totalCalories += cals;
+      }
+    });
+    
+    return totalCalories;
+  };
+
+  // PRESETS with detailed descriptions
   const presets = {
     matt: {
       name: 'Matt\'s Workout',
@@ -162,11 +204,25 @@ export default function PowerUp() {
       fitnessLevel: 'intermediate',
       description: 'Cardio, Core & Balance',
       emoji: '⭐',
+      exercises: 'Skipping (4×60s) → Plank (multiple sets) → Balance Board (multiple sets)',
+      blurb: 'High-intensity cardio with jumping rope, followed by core strengthening and balance work. Perfect for building endurance and coordination.',
     },
   };
 
-  // ALL EXERCISES - Enhanced tips with modifications and alternatives
-  const exercises = {
+  // CALORIE CONTEXT - What does X calories mean? (with sinful foods!)
+  const getCalorieContext = (calories) => {
+    if (calories < 30) return `~${Math.round(calories / 3.5)} almonds`;
+    if (calories < 50) return `1 small fruit or ~${Math.round(calories / 25)} apple`;
+    if (calories < 80) return `1 regular ice lolly or popsicle`;
+    if (calories < 120) return `1 scoop of ice cream`;
+    if (calories < 160) return `1 chocolate bar or small candy`;
+    if (calories < 200) return `1 slice of strawberry shortcake`;
+    if (calories < 280) return `1 muffin or small pastry`;
+    if (calories < 350) return `2 scoops of ice cream`;
+    if (calories < 450) return `1 slice of cake with frosting`;
+    if (calories < 600) return `1 large cupcake or donut`;
+    return `${Math.round(calories / 250)} small slices of cake`;
+  };
     skipping: { caloriesPerMin: { light: 8, intermediate: 12, vigorous: 15 }, description: 'Skipping', duration: { light: 45, intermediate: 60, vigorous: 75 }, tips: 'Keep steady rhythm, land softly on the balls of your feet. Modification: Double unders (rope passes twice per jump) for extra intensity. Alternative: Jump for height instead of speed.' },
     plank: { caloriesPerMin: { light: 3, intermediate: 4.5, vigorous: 6 }, description: 'Plank Hold', duration: { light: 30, intermediate: 45, vigorous: 60 }, tips: 'Keep your body straight like a board, engage your core! Modification: Plank with shoulder taps or arm lifts for added challenge. Alternative: Plank walks or moving planks.' },
     sidePlank: { caloriesPerMin: { light: 3, intermediate: 4, vigorous: 5.5 }, description: 'Side Plank', duration: { light: 30, intermediate: 40, vigorous: 50 }, tips: 'Stack your feet and keep your hips high. Modification: Lift your top leg or arm while holding. Alternative: Side plank with rotation.' },
@@ -466,18 +522,38 @@ export default function PowerUp() {
   // CONFIG SCREEN
   if (stage === 'config') {
     return (
-      <div style={{
-        padding: '50px 40px',
-        fontFamily: '"Lora", Georgia, serif',
-        maxWidth: '900px',
-        margin: '0 auto',
-        minHeight: '100vh',
-        background: colors.light,
-      }}>
-        <div style={{ marginBottom: '50px' }}>
-          <h1 style={{ color: colors.primary, marginBottom: '10px', fontSize: '3.2em', fontFamily: '"Lora", Georgia, serif', fontWeight: '700', letterSpacing: '1px' }}>PowerUp</h1>
-          <p style={{ color: colors.textSecondary, fontSize: '1.2em', fontStyle: 'italic', fontWeight: '500' }}>Your Personal Fitness Coach</p>
+      <div style={{ marginBottom: '50px' }}>
+        <h1 style={{ color: colors.primary, marginBottom: '10px', fontSize: '3.2em', fontFamily: '"Lora", Georgia, serif', fontWeight: '700', letterSpacing: '1px' }}>PowerUp</h1>
+        <p style={{ color: colors.textSecondary, fontSize: '1.2em', fontStyle: 'italic', fontWeight: '500', marginBottom: '40px' }}>Your Personal Fitness Coach</p>
+
+        {/* DURATION SELECTION - TOP LEVEL */}
+        <div style={{ marginBottom: '40px', padding: '25px', background: 'white', borderRadius: '12px', border: `2px solid ${colors.primary}` }}>
+          <h3 style={{ color: colors.primary, marginBottom: '20px', fontSize: '1.3em', fontWeight: '500' }}>⏱️ Workout Duration</h3>
+          <p style={{ color: colors.text, marginBottom: '15px', fontSize: '0.95em' }}>Select how long you want to work out (applies to all workouts)</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '10px' }}>
+            {[15, 20, 25, 30, 35, 40].map(mins => (
+              <button
+                key={mins}
+                onClick={() => setDuration(mins)}
+                style={{
+                  padding: '14px',
+                  background: duration === mins ? colors.primary : 'white',
+                  color: duration === mins ? 'white' : colors.text,
+                  border: `2px solid ${duration === mins ? colors.primary : colors.border}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: duration === mins ? 'bold' : 'normal',
+                  fontFamily: '"Lora", Georgia, serif',
+                  fontSize: '1em',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {mins}m
+              </button>
+            ))}
+          </div>
         </div>
+      </div>
 
         {/* PRESETS */}
         <div style={{ marginBottom: '50px' }}>
@@ -505,7 +581,10 @@ export default function PowerUp() {
                   }}>
                     <div style={{ fontSize: '2em', marginBottom: '10px' }}>{preset.emoji}</div>
                     <div style={{ fontWeight: 'bold', fontSize: '1.1em', marginBottom: '8px' }}>{preset.name}</div>
-                    <div style={{ fontSize: '0.9em', opacity: 0.9, marginBottom: '10px' }}>{preset.description}</div>
+                    <div style={{ fontSize: '0.9em', opacity: 0.9, marginBottom: '12px' }}>{preset.blurb}</div>
+                    <div style={{ fontSize: '0.8em', opacity: 0.85, marginBottom: '10px', fontStyle: 'italic' }}>
+                      {preset.exercises}
+                    </div>
                     <div style={{ fontSize: '0.85em', opacity: 0.8 }}>
                       Skips Today: {skipStats.daily}/{preset.defaultSkipGoal}
                     </div>
@@ -521,35 +600,16 @@ export default function PowerUp() {
                   
                   {selectedPreset === key && (
                     <div style={{
-                      padding: '20px',
+                      padding: '15px',
                       background: colors.light,
                       border: `2px solid ${colors.primary}`,
                       borderRadius: '0 0 8px 8px',
                       borderTop: 'none',
                       fontFamily: '"Lora", Georgia, serif',
+                      fontSize: '0.9em',
+                      color: colors.text,
                     }}>
-                      <p style={{ color: colors.text, marginBottom: '15px', fontSize: '0.95em', fontWeight: 'bold' }}>Workout Duration:</p>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
-                        {[15, 20, 25, 30, 35].map(mins => (
-                          <button
-                            key={mins}
-                            onClick={() => setDuration(mins)}
-                            style={{
-                              padding: '12px',
-                              background: duration === mins && selectedPreset === key ? colors.primary : 'white',
-                              color: duration === mins && selectedPreset === key ? 'white' : colors.text,
-                              border: `2px solid ${duration === mins && selectedPreset === key ? colors.primary : colors.border}`,
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontWeight: duration === mins && selectedPreset === key ? 'bold' : 'normal',
-                              fontFamily: '"Lora", Georgia, serif',
-                              fontSize: '0.9em',
-                            }}
-                          >
-                            {mins}m
-                          </button>
-                        ))}
-                      </div>
+                      Duration will be set from the top duration selector above ↑
                     </div>
                   )}
                 </div>
@@ -576,8 +636,10 @@ export default function PowerUp() {
               background: 'white',
               padding: '40px',
               borderRadius: '12px',
-              maxWidth: '400px',
+              maxWidth: '450px',
               boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+              maxHeight: '90vh',
+              overflowY: 'auto',
             }}>
               <h3 style={{ color: colors.primary, marginBottom: '20px', fontSize: '1.4em' }}>Skip Goal</h3>
               <p style={{ color: colors.text, marginBottom: '15px' }}>How many skips would you like to do today?</p>
@@ -606,9 +668,34 @@ export default function PowerUp() {
                   -moz-appearance: textfield;
                 }
               `}</style>
-              <div style={{ color: colors.textSecondary, fontSize: '0.9em', marginBottom: '20px' }}>
-                Est. Calories Burned: ~{Math.round((parseInt(skipInput || 250) / 105) * 45 * 0.12)}
+              
+              <div style={{ background: colors.light, padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+                <div style={{ color: colors.textSecondary, fontSize: '0.9em', marginBottom: '10px' }}>
+                  <strong>Skipping Calories:</strong>
+                </div>
+                <div style={{ color: colors.primary, fontSize: '1.3em', fontWeight: 'bold', marginBottom: '8px' }}>
+                  ~{Math.round((parseInt(skipInput || 250) / 105) * 45 * 0.15)} cal
+                </div>
+                <div style={{ color: colors.text, fontSize: '0.85em' }}>
+                  ≈ {getCalorieContext(Math.round((parseInt(skipInput || 250) / 105) * 45 * 0.15))}
+                </div>
               </div>
+
+              <div style={{ background: colors.light, padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+                <div style={{ color: colors.textSecondary, fontSize: '0.9em', marginBottom: '10px' }}>
+                  <strong>Estimated Total Workout Calories:</strong> ({duration}m, {fitnessLevel})
+                </div>
+                <div style={{ color: colors.primary, fontSize: '1.4em', fontWeight: 'bold', marginBottom: '12px' }}>
+                  ~{Math.round((parseInt(skipInput || 250) / 105) * 45 * 0.15 + (duration * 3 + (fitnessLevel === 'light' ? 2 : fitnessLevel === 'intermediate' ? 4 : 6)))} cal
+                </div>
+                <div style={{ color: colors.text, fontSize: '0.85em', marginBottom: '10px' }}>
+                  ≈ {getCalorieContext(Math.round((parseInt(skipInput || 250) / 105) * 45 * 0.15 + (duration * 3 + (fitnessLevel === 'light' ? 2 : fitnessLevel === 'intermediate' ? 4 : 6))))}
+                </div>
+                <div style={{ color: colors.textSecondary, fontSize: '0.75em', marginTop: '10px', lineHeight: '1.4', fontStyle: 'italic' }}>
+                  💡 Estimate based on your age ({ageGroup}), fitness level, and workout duration. Actual calories burned may vary based on body weight and effort.
+                </div>
+              </div>
+              
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={() => {
@@ -633,7 +720,6 @@ export default function PowerUp() {
                   onClick={() => {
                     setSkipGoal(parseInt(skipInput || 250));
                     setShowSkipGoalModal(false);
-                    setDuration(25);
                     generatePlan();
                   }}
                   style={{
@@ -658,7 +744,7 @@ export default function PowerUp() {
         <div style={{ marginBottom: '50px' }}>
           <h2 style={{ color: colors.text, marginBottom: '25px', fontSize: '1.4em', fontWeight: '400' }}>Or Customize</h2>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '25px', marginBottom: '30px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px', marginBottom: '30px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: colors.text, fontSize: '0.95em' }}>Age Group</label>
               <select value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)} style={{ width: '100%', padding: '12px', border: `1px solid ${colors.border}`, borderRadius: '6px', fontFamily: '"Lora", Georgia, serif', fontSize: '1em', color: colors.text, backgroundColor: 'white', cursor: 'pointer' }}>
@@ -677,30 +763,6 @@ export default function PowerUp() {
                 <option value="intermediate">Intermediate</option>
                 <option value="vigorous">Vigorous</option>
               </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: colors.text, fontSize: '0.95em' }}>Duration</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
-                {[15, 20, 25, 30, 35].map(mins => (
-                  <button
-                    key={mins}
-                    onClick={() => setDuration(mins)}
-                    style={{
-                      padding: '10px',
-                      background: duration === mins ? colors.primary : 'white',
-                      color: duration === mins ? 'white' : colors.text,
-                      border: `2px solid ${duration === mins ? colors.primary : colors.border}`,
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontWeight: duration === mins ? 'bold' : 'normal',
-                      fontFamily: '"Lora", Georgia, serif',
-                      fontSize: '0.85em',
-                    }}
-                  >
-                    {mins}m
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         </div>
@@ -760,13 +822,26 @@ export default function PowerUp() {
 
   // PREP SCREEN
   if (stage === 'prep') {
+    const estimatedWorkoutCalories = calculateWorkoutCalories();
+    
     return (
       <div style={{ padding: '40px', fontFamily: '"Lora", Georgia, serif', maxWidth: '700px', margin: '0 auto', minHeight: '100vh', background: colors.light, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
         <h2 style={{ color: colors.primary, marginBottom: '20px', fontSize: '2em' }}>Your Workout Plan</h2>
         
-        <button onClick={() => startWorkout()} style={{ width: '100%', padding: '14px', fontSize: '1.1em', background: colors.primary, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontFamily: '"Lora", Georgia, serif', marginBottom: '25px' }}>
-          🚀 Start Workout
-        </button>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '25px' }}>
+          <button onClick={() => startWorkout()} style={{ width: '100%', padding: '14px', fontSize: '1.1em', background: colors.primary, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontFamily: '"Lora", Georgia, serif', transition: 'all 0.3s ease', boxShadow: '0 2px 8px rgba(217, 119, 6, 0.2)' }} onMouseEnter={(e) => e.target.style.boxShadow = '0 4px 12px rgba(217, 119, 6, 0.3)'} onMouseLeave={(e) => e.target.style.boxShadow = '0 2px 8px rgba(217, 119, 6, 0.2)'}>
+            🚀 Start Workout
+          </button>
+          <button onClick={() => { setStage('config'); setWorkoutPlan([]); setSelectedGoal(null); setSelectedExercises([]); setSelectedPreset(null); setSkipGoal(null); }} style={{ width: '100%', padding: '14px', fontSize: '1em', background: colors.border, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontFamily: '"Lora", Georgia, serif', transition: 'all 0.3s ease' }} onMouseEnter={(e) => { e.target.style.background = colors.primaryLight; e.target.style.color = 'white'; }} onMouseLeave={(e) => { e.target.style.background = colors.border; e.target.style.color = colors.text; }}>
+            ← Back
+          </button>
+        </div>
+
+        <div style={{ background: colors.primary, color: 'white', padding: '20px', borderRadius: '8px', marginBottom: '25px', textAlign: 'center' }}>
+          <div style={{ fontSize: '0.9em', marginBottom: '8px', opacity: 0.9 }}>Estimated Calories Burned</div>
+          <div style={{ fontSize: '2.2em', fontWeight: 'bold', marginBottom: '8px' }}>~{estimatedWorkoutCalories} cal</div>
+          <div style={{ fontSize: '0.9em', opacity: 0.95 }}>≈ {getCalorieContext(estimatedWorkoutCalories)}</div>
+        </div>
 
         <div style={{ background: 'white', padding: '15px', borderRadius: '8px', border: `1px solid ${colors.border}` }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '8px' }}>
@@ -888,14 +963,16 @@ export default function PowerUp() {
 
   // RESULTS SCREEN
   if (stage === 'results') {
+    const totalWorkoutCalories = calculateWorkoutCalories();
+    
     return (
       <div style={{ padding: '60px 40px', textAlign: 'center', fontFamily: '"Lora", Georgia, serif', minHeight: '100vh', background: colors.light }}>
         <h1 style={{ fontSize: '3em', color: colors.primary, marginBottom: '20px', fontFamily: '"Lora", Georgia, serif', fontWeight: '400' }}>🎉 Workout Complete!</h1>
-        <p style={{ fontSize: '1.3em', color: colors.text, marginBottom: '30px' }}>Great job! You completed {workoutPlan.length} exercises.</p>
+        <p style={{ fontSize: '1.3em', color: colors.text, marginBottom: '40px' }}>Great job! You completed {workoutPlan.length} exercises.</p>
         
         {skipGoal && (
           <div style={{ background: 'white', padding: '30px', borderRadius: '12px', marginBottom: '30px', border: `2px solid ${colors.primary}` }}>
-            <h2 style={{ color: colors.primary, marginBottom: '20px', fontSize: '1.5em' }}>Skip Count</h2>
+            <h2 style={{ color: colors.primary, marginBottom: '20px', fontSize: '1.5em' }}>⛹️ Skip Count</h2>
             <p style={{ fontSize: '2em', color: colors.primary, fontWeight: 'bold', marginBottom: '10px' }}>{Math.round(estimatedSkips)} Skips</p>
             <p style={{ color: colors.text, marginBottom: '15px' }}>Daily Goal: {skipGoal}</p>
             <p style={{ color: colors.text, fontSize: '1.1em' }}>
@@ -904,8 +981,30 @@ export default function PowerUp() {
           </div>
         )}
 
+        <div style={{ background: 'white', padding: '30px', borderRadius: '12px', marginBottom: '30px', border: `2px solid ${colors.primary}` }}>
+          <h3 style={{ color: colors.primary, marginBottom: '20px', fontSize: '1.4em' }}>🔥 Calories Burned</h3>
+          <div style={{ fontSize: '2.2em', color: colors.primary, fontWeight: 'bold', marginBottom: '15px' }}>
+            ~{totalWorkoutCalories} calories
+          </div>
+          <div style={{ color: colors.text, fontSize: '1.1em', marginBottom: '20px' }}>
+            ≈ <strong>{getCalorieContext(totalWorkoutCalories)}</strong>
+          </div>
+          <div style={{ background: colors.light, padding: '15px', borderRadius: '8px', color: colors.textSecondary, fontSize: '0.9em', lineHeight: '1.6' }}>
+            <div style={{ marginBottom: '10px' }}>
+              💡 This estimate is based on:
+            </div>
+            <div style={{ fontSize: '0.85em' }}>
+              • Your age: {ageGroup}<br/>
+              • Fitness level: {fitnessLevel}<br/>
+              • Workout duration: {duration} minutes<br/>
+              <br/>
+              <em>Actual calories burned may vary ±15% based on body weight, metabolism, and effort level.</em>
+            </div>
+          </div>
+        </div>
+
         <div style={{ background: 'white', padding: '25px', borderRadius: '12px', marginBottom: '30px', border: `1px solid ${colors.border}` }}>
-          <h3 style={{ color: colors.primary, marginBottom: '15px' }}>Your Skip Stats</h3>
+          <h3 style={{ color: colors.primary, marginBottom: '15px' }}>📊 Your Skip Stats</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '15px' }}>
             <div>
               <p style={{ color: colors.textSecondary, fontSize: '0.9em', marginBottom: '5px' }}>Today</p>
