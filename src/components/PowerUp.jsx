@@ -239,12 +239,12 @@ export default function PowerUp() {
     synth.current.speak(utterance);
   };
 
-  const speak = (text) => {
+  const speak = (text, speed = 1.0) => {
     if (!synth.current) return;
     
     synth.current.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0; // Normal speed
+    utterance.rate = speed;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
     
@@ -395,51 +395,50 @@ export default function PowerUp() {
       
       if (firstExercise.isSkipping) {
         const skipsEst = Math.round((firstExercise.duration / 45) * 105);
-        speak(`${exerciseName}. ${skipsEst} skips.`);
+        speak(`${exerciseName}! Go for at least ${skipsEst} skips!`);
       } else {
-        speak(`${exerciseName}.`);
+        speak(`${exerciseName}! Let's go!`);
       }
     }, 6000);
   };
 
   const funPhrases = {
     breakStart: [
-      'Quick breather! You earned it.',
-      'Rest up, champ. You\'re doing great.',
-      'Catch your breath. No judgment here.',
-      'Take a moment. You deserve this.',
-      'Breathing break activated!',
-      'Recovery mode: engaged.',
-      'Time out! But not for long.',
-      'Pause screen - you\'re allowed!',
+      'Quick breather! You\'re doing so well.',
+      'Nice job! Take a moment to recover.',
+      'Catch your breath. You\'ve earned this.',
+      'Take a beat. You\'re crushing it.',
+      'Breathing break! You\'re awesome.',
+      'Recovery time. You\'re doing great.',
+      'Shake out those muscles. You\'ve got this!',
+      'Short break. Get ready for more!',
     ],
     restStart: [
-      'Time to recover like the champion you are.',
-      'Shake it out. You crushed that.',
-      'Nice work! Let those muscles chill.',
-      'Rest is part of the grind, friend.',
-      'Catch that breath. You\'re killing it.',
-      'That\'s a solid play! Well done.',
-      'You just scored big time!',
-      'Recovery time. You\'ve earned it.',
-      'Blimey, you\'re brilliant at this!',
-      'Cor! That was absolutely splendid!',
+      'You\'re doing amazing! Time to recover.',
+      'Fantastic work! Shake it out.',
+      'Wow, look at you go! Rest up.',
+      'That was impressive! Recovery time now.',
+      'You\'re absolutely crushing it! Take this rest.',
+      'Such great effort! Time to breathe.',
+      'You\'re a superstar! Let\'s recover.',
+      'Keep it up! Nice rest break coming up.',
+      'You\'re brilliant at this! Time to chill.',
+      'Incredible form! Let those muscles rest.',
     ],
     nextExercise: [
       'Ready for round two?',
       'Here we go again!',
       'Let\'s keep this train rolling.',
       'You\'re on fire! Keep going.',
-      'One more time, let\'s goooo!',
+      'One more time, let\'s go!',
       'Same exercise, same energy!',
       'Time for a replay!',
       'Next round - you\'ve got this!',
     ],
     newExercise: [
       'Time to switch it up!',
-      'New exercise, who dis?',
-      'Let\'s do this!',
-      'Fresh exercise energy incoming.',
+      'New exercise! Let\'s do this!',
+      'Fresh energy incoming.',
       'Ready for something new?',
       'Change of pace, same intensity!',
       'New level unlocked!',
@@ -524,19 +523,44 @@ export default function PowerUp() {
       
       if (nextItem.type === 'transition') {
         const breakPhrase = getRandomPhrase('breakStart');
-        speak(`${breakPhrase}`);
+        speak(`${breakPhrase}`, 0.9); // Slower for breaks
       } else if (nextItem.type === 'rest') {
         const restPhrase = getRandomPhrase('restStart');
-        speak(`${restPhrase}`);
+        speak(`${restPhrase}`, 0.9); // Slower for rest periods
       } else if (nextItem.type === 'exercise') {
         const exerciseName = exercises[nextItem.exercise].description;
+        
+        // Check if this is a repeat of the previous exercise
+        const previousExercise = currentIndex > 0 ? workoutPlan[currentIndex - 2]?.exercise : null;
+        const isRepeat = previousExercise === nextItem.exercise;
+        
+        // Count how many times this exercise has appeared so far
+        let setNumber = 1;
+        for (let i = 0; i < currentIndex - 1; i++) {
+          if (workoutPlan[i]?.exercise === nextItem.exercise && workoutPlan[i]?.type === 'exercise') {
+            setNumber++;
+          }
+        }
         
         if (nextItem.isSkipping) {
           const skipsEst = Math.round((nextItem.duration / 45) * 105);
           setEstimatedSkips(skipsEst);
-          speak(`${exerciseName}. ${skipsEst} skips.`);
+          
+          if (isRepeat) {
+            // Repeat set with set number
+            speak(`Set ${setNumber} of ${exerciseName}! Try for the same number of skips or better!`, 1.0);
+          } else {
+            // First set of exercise
+            speak(`${exerciseName}! Go for at least ${skipsEst} skips!`, 1.0);
+          }
         } else {
-          speak(`${exerciseName}.`);
+          if (isRepeat) {
+            // Repeat set with set number
+            speak(`Set ${setNumber} of ${exerciseName}! Keep the same energy!`, 1.0);
+          } else {
+            // First set of non-skipping exercise
+            speak(`${exerciseName}! Let's go!`, 1.0);
+          }
         }
       }
     } else {
@@ -712,36 +736,38 @@ export default function PowerUp() {
           )}
         </div>
 
-        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-          {!isRunning ? (
-            <button onClick={() => { setIsRunning(true); setCountdown(0); setIsPaused(false); }} style={{ padding: '12px 20px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95em', ...fontStyle }}>
-              <PlayIcon size={16} style={{ display: 'inline', marginRight: '6px' }} /> Play
-            </button>
-          ) : (
-            <>
-              <button onClick={() => setIsPaused(!isPaused)} style={{ padding: '12px 20px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95em', ...fontStyle }}>
-                <Pause size={16} style={{ display: 'inline', marginRight: '6px' }} /> {isPaused ? 'Resume' : 'Pause'}
+        <div>
+          <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            {!isRunning ? (
+              <button onClick={() => { setIsRunning(true); setCountdown(0); setIsPaused(false); }} style={{ padding: '12px 20px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95em', ...fontStyle }}>
+                <PlayIcon size={16} style={{ display: 'inline', marginRight: '6px' }} /> Play
               </button>
-              <button onClick={() => { setIsRunning(false); setStage('config'); setWorkoutPlan([]); }} style={{ padding: '12px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95em', ...fontStyle }}>
-                <StopCircle size={16} style={{ display: 'inline', marginRight: '6px' }} /> Stop
-              </button>
-            </>
+            ) : (
+              <>
+                <button onClick={() => setIsPaused(!isPaused)} style={{ padding: '12px 20px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95em', ...fontStyle }}>
+                  <Pause size={16} style={{ display: 'inline', marginRight: '6px' }} /> {isPaused ? 'Resume' : 'Pause'}
+                </button>
+                <button onClick={() => { setIsRunning(false); setStage('config'); setWorkoutPlan([]); }} style={{ padding: '12px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95em', ...fontStyle }}>
+                  <StopCircle size={16} style={{ display: 'inline', marginRight: '6px' }} /> Stop
+                </button>
+              </>
+            )}
+          </div>
+
+          {exerciseData && (
+            <div style={{ background: 'white', padding: '16px', borderRadius: '8px', marginBottom: '20px', border: `1px solid ${colors.border}` }}>
+              {exerciseData.tips.split('. ').map((sentence, idx) => (
+                <p key={idx} style={{ color: colors.text, fontSize: '0.9em', marginBottom: idx === exerciseData.tips.split('. ').length - 1 ? '0' : '8px', lineHeight: '1.5', fontWeight: '400', ...fontStyle }}>
+                  {sentence}{sentence.endsWith('.') ? '' : '.'}
+                </p>
+              ))}
+            </div>
           )}
         </div>
 
-        <p style={{ color: colors.text, marginBottom: '15px', fontSize: '0.9em', ...fontStyle, fontWeight: '500' }}>
+        <p style={{ color: colors.text, marginBottom: '0', fontSize: '0.9em', ...fontStyle, fontWeight: '500' }}>
           Exercise {currentIndex + 1} of {workoutPlan.length}
         </p>
-
-        {exerciseData && (
-          <div style={{ background: 'white', padding: '16px', borderRadius: '8px', marginBottom: '15px', border: `1px solid ${colors.border}` }}>
-            {exerciseData.tips.split('. ').map((sentence, idx) => (
-              <p key={idx} style={{ color: colors.text, fontSize: '0.9em', marginBottom: idx === exerciseData.tips.split('. ').length - 1 ? '0' : '8px', lineHeight: '1.5', fontWeight: '400', ...fontStyle }}>
-                {sentence}{sentence.endsWith('.') ? '' : '.'}
-              </p>
-            ))}
-          </div>
-        )}
       </div>
     );
   }
