@@ -379,7 +379,7 @@ export default function PowerUp() {
       <div style={{ padding: '50px 40px', ...fontStyle, maxWidth: '900px', margin: '0 auto', minHeight: '100vh', background: colors.light }}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');`}</style>
 
-        <h1 style={{ color: colors.primary, marginBottom: '5px', fontSize: '3.2em', fontWeight: '600', ...fontStyle }}>PowerUp</h1>
+        <h1 style={{ color: colors.primary, marginBottom: '5px', fontSize: '3.2em', fontWeight: '600', ...fontStyle }}>PowerUp!</h1>
         <p style={{ color: colors.textSecondary, fontSize: '1.2em', fontWeight: '500', marginBottom: '40px', ...fontStyle }}>Your Fitness Champion</p>
 
         <div style={{ marginBottom: '40px', padding: '20px', background: 'white', borderRadius: '12px', border: `2px solid ${colors.primary}` }}>
@@ -423,12 +423,7 @@ export default function PowerUp() {
                 <div style={{ color: colors.text, fontSize: '0.9em', marginBottom: '8px', fontWeight: '500' }}>Skipping Calories:</div>
                 <div style={{ color: colors.primary, fontSize: '1.6em', fontWeight: '600', marginBottom: '6px' }}>~{calculateSkipsCalories(parseInt(skipInput || 250))}</div>
                 <div style={{ color: colors.text, fontSize: '0.9em' }}>≈ {getCalorieContext(calculateSkipsCalories(parseInt(skipInput || 250)))}</div>
-              </div>
-
-              <div style={{ background: colors.light, padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-                <div style={{ color: colors.text, fontSize: '0.9em', marginBottom: '8px', fontWeight: '500' }}>Total Workout Estimate:</div>
-                <div style={{ color: colors.primary, fontSize: '1.6em', fontWeight: '600', marginBottom: '6px' }}>~{estimateWorkoutCaloriesForModal()}</div>
-                <div style={{ color: colors.text, fontSize: '0.9em' }}>≈ {getCalorieContext(estimateWorkoutCaloriesForModal())}</div>
+                <div style={{ color: colors.textSecondary, fontSize: '0.8em', marginTop: '8px', fontStyle: 'italic' }}>Full calorie breakdown shown in workout plan →</div>
               </div>
               
               <div style={{ display: 'flex', gap: '10px' }}>
