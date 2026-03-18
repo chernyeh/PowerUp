@@ -290,59 +290,74 @@ export default function PowerUp() {
     ];
 
     const sets = fitnessLevel === 'light' ? 2 : fitnessLevel === 'intermediate' ? 3 : 4;
-    const plan = [];
+    const targetDuration = duration * 60; // Convert to seconds
+    let plan = [];
+    let usedTime = 0;
 
-    // For skipping: Cap at 60s per set, round up to next 30s
-    if (sortedExercises.includes('skipping')) {
-      let remainingSeconds = totalSkippingDuration;
-      let skippingSets = 0;
+    // CALCULATE SKIPPING SETS (fixed, non-negotiable)
+    let skippingSets = [];
+    let remainingSeconds = totalSkippingDuration;
+    let skipSetCount = 0;
+    
+    while (remainingSeconds > 0) {
+      skipSetCount++;
+      let setDuration;
       
-      while (remainingSeconds > 0) {
-        skippingSets++;
-        let setDuration;
-        
-        if (remainingSeconds > 60) {
-          setDuration = 60;
-        } else {
-          // Round up remaining time to next 30 seconds
-          setDuration = Math.ceil(remainingSeconds / 30) * 30;
-        }
-        
-        plan.push({ exercise: 'skipping', duration: setDuration, type: 'exercise', set: skippingSets, totalSets: skippingSets, isSkipping: true, skipGoal: skipsForWorkout });
-        remainingSeconds -= setDuration;
-        
-        // 15 second rest between skipping sets (except after last one)
-        if (remainingSeconds > 0) {
-          plan.push({ type: 'transition', duration: 15 });
-        }
+      if (remainingSeconds > 60) {
+        setDuration = 60;
+      } else {
+        // Round up remaining time to next 30 seconds
+        setDuration = Math.ceil(remainingSeconds / 30) * 30;
       }
       
-      // 1 minute rest after all skipping
-      plan.push({ type: 'rest', duration: 60, afterSkipping: true });
+      skippingSets.push({ exercise: 'skipping', duration: setDuration, type: 'exercise', set: skipSetCount, totalSets: skipSetCount, isSkipping: true, skipGoal: skipsForWorkout });
+      remainingSeconds -= setDuration;
     }
 
-    // Other exercises - GROUPED BY EXERCISE TYPE (consecutive sets)
+    // Add skipping sets to plan
+    skippingSets.forEach((set, idx) => {
+      plan.push(set);
+      if (idx < skippingSets.length - 1) {
+        plan.push({ type: 'transition', duration: 15 });
+        usedTime += 15;
+      }
+      usedTime += set.duration;
+    });
+    
+    // 1 minute rest after all skipping
+    plan.push({ type: 'rest', duration: 60, afterSkipping: true });
+    usedTime += 60;
+
+    // CALCULATE OTHER EXERCISES with remaining time
     const otherExercises = sortedExercises.filter(ex => ex !== 'skipping');
+    const remainingTime = targetDuration - usedTime;
     
     for (const exercise of otherExercises) {
       const exerciseData = exercises[exercise];
       const isBalance = balanceExercises.includes(exercise);
       
-      // Determine number of sets for this exercise
+      // Calculate how many sets we can fit
       let exerciseSets = sets;
-      if (isBalance && duration < 25) {
-        // If time is tight, reduce balance sets
-        exerciseSets = 2;
+      let exerciseSetDuration = isBalance ? 90 : exerciseData.duration[fitnessLevel];
+      
+      // Estimate time for this exercise (sets + transitions + rest after)
+      const estimatedExerciseTime = (exerciseSets * exerciseSetDuration) + ((exerciseSets - 1) * 15) + 45;
+      
+      // If time is tight and this is balance, reduce sets
+      if (isBalance && estimatedExerciseTime > remainingTime) {
+        exerciseSets = Math.max(2, Math.floor(remainingTime / (exerciseSetDuration + 15)));
       }
       
-      // Do all sets of this exercise consecutively
+      // Add exercise sets
       for (let set = 1; set <= exerciseSets; set++) {
-        const exerciseDuration = isBalance ? 90 : exerciseData.duration[fitnessLevel];
-        plan.push({ exercise: exercise, duration: exerciseDuration, type: 'exercise', set, totalSets: exerciseSets });
+        const duration = isBalance ? 90 : exerciseData.duration[fitnessLevel];
+        plan.push({ exercise: exercise, duration: duration, type: 'exercise', set, totalSets: exerciseSets });
+        usedTime += duration;
         
         // 15 second rest between sets of same exercise
         if (set < exerciseSets) {
           plan.push({ type: 'transition', duration: 15 });
+          usedTime += 15;
         }
       }
       
@@ -350,6 +365,7 @@ export default function PowerUp() {
       const exerciseIndex = otherExercises.indexOf(exercise);
       if (exerciseIndex < otherExercises.length - 1) {
         plan.push({ type: 'rest', duration: 45 });
+        usedTime += 45;
       }
     }
 
