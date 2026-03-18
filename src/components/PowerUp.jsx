@@ -201,59 +201,71 @@ export default function PowerUp() {
     return totalCalories;
   };
 
-  const speak = (text) => {
-    if (synth.current) {
-      synth.current.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-      
-      // Get voices and wait for them to load if needed
-      let voices = synth.current.getVoices();
-      
-      // If no voices loaded yet, wait and try again
-      if (voices.length === 0) {
-        synth.current.onvoiceschanged = () => {
-          voices = synth.current.getVoices();
-          selectAndSpeak(voices, utterance);
-        };
-      } else {
-        selectAndSpeak(voices, utterance);
-      }
-    }
-  };
-
   const selectAndSpeak = (voices, utterance) => {
     let selectedVoice = null;
     
-    // If voice preference is set, use it
-    if (preferredVoice) {
-      if (preferredVoice === 'marcus') {
-        selectedVoice = voices.find(v => v.name.includes('Marcus'));
-      } else if (preferredVoice === 'james') {
-        selectedVoice = voices.find(v => v.name.includes('Neural2-A') || v.name.includes('James'));
-      } else if (preferredVoice === 'sophia') {
-        selectedVoice = voices.find(v => v.name.includes('Sophia'));
-      } else if (preferredVoice === 'aurora') {
-        selectedVoice = voices.find(v => v.name.includes('Aurora'));
-      } else if (preferredVoice === 'clara') {
-        selectedVoice = voices.find(v => v.name.includes('Clara'));
-      }
+    // PRIORITY: Use preferred voice first with proper fallbacks
+    if (preferredVoice === 'marcus') {
+      selectedVoice = voices.find(v => v.name.includes('Marcus'));
+    } else if (preferredVoice === 'james') {
+      selectedVoice = voices.find(v => v.name.includes('James')) ||
+                      voices.find(v => v.name.includes('Neural2-A'));
+    } else if (preferredVoice === 'sophia') {
+      selectedVoice = voices.find(v => v.name.includes('Sophia'));
+    } else if (preferredVoice === 'aurora') {
+      selectedVoice = voices.find(v => v.name.includes('Aurora'));
+    } else if (preferredVoice === 'clara') {
+      selectedVoice = voices.find(v => v.name.includes('Clara'));
     }
     
-    // Fallback if preferred voice not found
+    // Strong fallback chain if preferred not found
     if (!selectedVoice) {
-      selectedVoice = voices.find(v => 
-        v.name.includes('Sophia') ||
-        v.name.includes('Aurora') ||
-        v.name.includes('Clara') ||
-        v.name.includes('Google US English Female')
-      );
+      selectedVoice = voices.find(v => v.name.includes('Sophia')) ||
+                      voices.find(v => v.name.includes('Aurora')) ||
+                      voices.find(v => v.name.includes('Clara')) ||
+                      voices.find(v => v.name.toLowerCase().includes('female')) ||
+                      voices[0];
     }
     
-    if (selectedVoice) utterance.voice = selectedVoice;
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+    
     synth.current.speak(utterance);
+  };
+
+  const speak = (text) => {
+    if (!synth.current) return;
+    
+    synth.current.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    
+    let voices = synth.current.getVoices();
+    
+    // If voices not loaded, wait for them
+    if (voices.length === 0) {
+      const voicesLoadedHandler = () => {
+        voices = synth.current.getVoices();
+        if (voices.length > 0) {
+          synth.current.onvoiceschanged = null;
+          selectAndSpeak(voices, utterance);
+        }
+      };
+      synth.current.onvoiceschanged = voicesLoadedHandler;
+      
+      // Timeout fallback
+      setTimeout(() => {
+        voices = synth.current.getVoices();
+        if (voices.length > 0) {
+          selectAndSpeak(voices, utterance);
+        }
+      }, 300);
+    } else {
+      selectAndSpeak(voices, utterance);
+    }
   };
 
   const generatePlan = () => {
@@ -376,19 +388,16 @@ export default function PowerUp() {
     setTimeLeft(45);
     setIsRunning(true);
     
-    // Wait for voice to load, then announce countdown synchronized with timer
-    setTimeout(() => {
-      speak('Get ready!');
-    }, 100);
+    // Announce with small delay for voice to load
+    speak('Get ready!');
+    setTimeout(() => speak('5'), 1200);
+    setTimeout(() => speak('4'), 2200);
+    setTimeout(() => speak('3'), 3200);
+    setTimeout(() => speak('2'), 4200);
+    setTimeout(() => speak('1'), 5200);
+    setTimeout(() => speak('Go!'), 6200);
     
-    setTimeout(() => speak('5'), 1000);
-    setTimeout(() => speak('4'), 2000);
-    setTimeout(() => speak('3'), 3000);
-    setTimeout(() => speak('2'), 4000);
-    setTimeout(() => speak('1'), 5000);
-    setTimeout(() => speak('Go!'), 6000);
-    
-    // Start the actual workout after countdown
+    // Start the actual workout - countdown will decrement from 5 on display side
     setTimeout(() => {
       setCountdown(0);
       const firstExercise = workoutPlan[0];
@@ -398,7 +407,16 @@ export default function PowerUp() {
         const skipsEst = Math.round((firstExercise.duration / 45) * 105);
         setEstimatedSkips(skipsEst);
       }
-    }, 6500);
+      
+      // Announce the first exercise
+      const exerciseName = exercises[firstExercise.exercise].description;
+      if (firstExercise.isSkipping) {
+        const skipsEst = Math.round((firstExercise.duration / 45) * 105);
+        speak(`${exerciseName} for ${firstExercise.duration} seconds. Try for ${skipsEst} skips.`);
+      } else {
+        speak(`${exerciseName} for ${firstExercise.duration} seconds.`);
+      }
+    }, 7000);
   };
 
   const funPhrases = {
@@ -619,10 +637,10 @@ export default function PowerUp() {
                 <p style={{ color: colors.text, marginBottom: '12px', fontWeight: '600', fontSize: '1em' }}>Male Voices:</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
                   <button onClick={() => { setPreferredVoice('marcus'); setShowVoiceChoice(false); setShowSkipGoalModal(true); }} style={{ padding: '12px', background: preferredVoice === 'marcus' ? colors.primary : 'white', color: preferredVoice === 'marcus' ? 'white' : colors.text, border: `2px solid ${preferredVoice === 'marcus' ? colors.primary : colors.border}`, borderRadius: '8px', cursor: 'pointer', fontWeight: '600', ...fontStyle, fontSize: '0.95em', transition: 'all 0.2s ease' }}>
-                    Marcus (Journey)
+                    Marcus
                   </button>
                   <button onClick={() => { setPreferredVoice('james'); setShowVoiceChoice(false); setShowSkipGoalModal(true); }} style={{ padding: '12px', background: preferredVoice === 'james' ? colors.primary : 'white', color: preferredVoice === 'james' ? 'white' : colors.text, border: `2px solid ${preferredVoice === 'james' ? colors.primary : colors.border}`, borderRadius: '8px', cursor: 'pointer', fontWeight: '600', ...fontStyle, fontSize: '0.95em', transition: 'all 0.2s ease' }}>
-                    James (Neural 2)
+                    James
                   </button>
                 </div>
               </div>
