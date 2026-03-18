@@ -292,45 +292,63 @@ export default function PowerUp() {
     const sets = fitnessLevel === 'light' ? 2 : fitnessLevel === 'intermediate' ? 3 : 4;
     const plan = [];
 
-    // For skipping: all consecutive sets, then 1 minute rest
+    // For skipping: Cap at 60s per set, round up to next 30s
     if (sortedExercises.includes('skipping')) {
-      const durationPerSet = Math.ceil(totalSkippingDuration / sets);
-      for (let set = 1; set <= sets; set++) {
-        plan.push({ exercise: 'skipping', duration: durationPerSet, type: 'exercise', set, totalSets: sets, isSkipping: true, skipGoal: skipsForWorkout });
-        // 15 second rest between skipping sets
-        if (set < sets) {
+      let remainingSeconds = totalSkippingDuration;
+      let skippingSets = 0;
+      
+      while (remainingSeconds > 0) {
+        skippingSets++;
+        let setDuration;
+        
+        if (remainingSeconds > 60) {
+          setDuration = 60;
+        } else {
+          // Round up remaining time to next 30 seconds
+          setDuration = Math.ceil(remainingSeconds / 30) * 30;
+        }
+        
+        plan.push({ exercise: 'skipping', duration: setDuration, type: 'exercise', set: skippingSets, totalSets: skippingSets, isSkipping: true, skipGoal: skipsForWorkout });
+        remainingSeconds -= setDuration;
+        
+        // 15 second rest between skipping sets (except after last one)
+        if (remainingSeconds > 0) {
           plan.push({ type: 'transition', duration: 15 });
         }
       }
+      
       // 1 minute rest after all skipping
       plan.push({ type: 'rest', duration: 60, afterSkipping: true });
     }
 
-    // Other exercises
+    // Other exercises - GROUPED BY EXERCISE TYPE (consecutive sets)
     const otherExercises = sortedExercises.filter(ex => ex !== 'skipping');
-    for (let set = 1; set <= sets; set++) {
-      for (let i = 0; i < otherExercises.length; i++) {
-        const ex = otherExercises[i];
-        const exerciseData = exercises[ex];
-        let exerciseDuration = exerciseData.duration[fitnessLevel];
+    
+    for (const exercise of otherExercises) {
+      const exerciseData = exercises[exercise];
+      const isBalance = balanceExercises.includes(exercise);
+      
+      // Determine number of sets for this exercise
+      let exerciseSets = sets;
+      if (isBalance && duration < 25) {
+        // If time is tight, reduce balance sets
+        exerciseSets = 2;
+      }
+      
+      // Do all sets of this exercise consecutively
+      for (let set = 1; set <= exerciseSets; set++) {
+        const exerciseDuration = isBalance ? 90 : exerciseData.duration[fitnessLevel];
+        plan.push({ exercise: exercise, duration: exerciseDuration, type: 'exercise', set, totalSets: exerciseSets });
         
-        // Balance board: adjust sets based on duration
-        if (ex === 'balanceBoard') {
-          const balanceSetsNeeded = sets;
-          exerciseDuration = 90;
-        }
-        
-        plan.push({ exercise: ex, duration: exerciseDuration, type: 'exercise', set, totalSets: sets });
-        
-        // 15 second rest between cardio, 30 seconds for others
-        if (i < otherExercises.length - 1) {
-          const restDuration = cardioExercises.includes(ex) ? 15 : 30;
-          plan.push({ type: 'transition', duration: restDuration });
+        // 15 second rest between sets of same exercise
+        if (set < exerciseSets) {
+          plan.push({ type: 'transition', duration: 15 });
         }
       }
       
-      // Rest between sets (if not the last set)
-      if (set < sets && otherExercises.length > 0) {
+      // Rest between different exercises
+      const exerciseIndex = otherExercises.indexOf(exercise);
+      if (exerciseIndex < otherExercises.length - 1) {
         plan.push({ type: 'rest', duration: 45 });
       }
     }
@@ -499,10 +517,21 @@ export default function PowerUp() {
                   fontSize: '1.1em',
                   marginBottom: '15px',
                   boxSizing: 'border-box',
+                  color: colors.text,
                 }}
               />
+              <style>{`
+                input[type="number"]::-webkit-outer-spin-button,
+                input[type="number"]::-webkit-inner-spin-button {
+                  -webkit-appearance: none;
+                  margin: 0;
+                }
+                input[type="number"] {
+                  -moz-appearance: textfield;
+                }
+              `}</style>
               <div style={{ color: colors.textSecondary, fontSize: '0.9em', marginBottom: '20px' }}>
-                Estimated duration: ~{Math.round((parseInt(skipInput || 250) / 105) * 45 / 60)} minutes
+                Est. Calories Burned: ~{Math.round((parseInt(skipInput || 250) / 105) * 45 * 0.12)}
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
