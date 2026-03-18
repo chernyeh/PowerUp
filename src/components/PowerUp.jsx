@@ -837,9 +837,6 @@ export default function PowerUp() {
         </div>
       </div>
 
-      <p style={{ color: colors.text, marginBottom: '0', fontSize: '0.9em', ...fontStyle, fontWeight: '500' }}>
-        Exercise {currentIndex + 1} of {workoutPlan.length}
-      </p>
     </div>
     );
   }
