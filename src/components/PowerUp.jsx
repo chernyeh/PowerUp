@@ -130,6 +130,18 @@ export default function PowerUp() {
     return () => clearInterval(interval);
   }, [countdown]);
 
+  // NEW: Speak the countdown number when it changes
+  useEffect(() => {
+    if (stage === 'workout' && countdown > 0 && countdown <= 5) {
+      speak(countdown.toString());
+    } else if (stage === 'workout' && countdown === 0 && isRunning) {
+      // Only say "Go!" once when transitioning from 1 to 0
+      if (timeLeft === workoutPlan[0]?.duration) {
+        speak('Go!');
+      }
+    }
+  }, [countdown, stage]);
+
   useEffect(() => {
     let interval;
     if (isRunning && !isPaused && timeLeft > 0 && countdown === 0) {
@@ -201,31 +213,52 @@ export default function PowerUp() {
     return totalCalories;
   };
 
+  useEffect(() => {
+    // Pre-load voices when component mounts
+    if (synth.current) {
+      synth.current.getVoices();
+      synth.current.onvoiceschanged = () => {
+        synth.current.getVoices();
+      };
+    }
+  }, []);
+
   const selectAndSpeak = (voices, utterance) => {
     let selectedVoice = null;
     
-    // PRIORITY: Use preferred voice first with proper fallbacks
+    console.log('Preferred voice:', preferredVoice);
+    console.log('Available voices:', voices.map(v => v.name));
+    
+    // PRIORITY: Use preferred voice first
     if (preferredVoice === 'marcus') {
-      selectedVoice = voices.find(v => v.name.includes('Marcus'));
+      selectedVoice = voices.find(v => v.name.toLowerCase().includes('marcus'));
+      console.log('Looking for Marcus:', selectedVoice);
     } else if (preferredVoice === 'james') {
-      selectedVoice = voices.find(v => v.name.includes('James')) ||
+      selectedVoice = voices.find(v => v.name.toLowerCase().includes('james')) ||
                       voices.find(v => v.name.includes('Neural2-A'));
+      console.log('Looking for James:', selectedVoice);
     } else if (preferredVoice === 'sophia') {
-      selectedVoice = voices.find(v => v.name.includes('Sophia'));
+      selectedVoice = voices.find(v => v.name.toLowerCase().includes('sophia'));
+      console.log('Looking for Sophia:', selectedVoice);
     } else if (preferredVoice === 'aurora') {
-      selectedVoice = voices.find(v => v.name.includes('Aurora'));
+      selectedVoice = voices.find(v => v.name.toLowerCase().includes('aurora'));
+      console.log('Looking for Aurora:', selectedVoice);
     } else if (preferredVoice === 'clara') {
-      selectedVoice = voices.find(v => v.name.includes('Clara'));
+      selectedVoice = voices.find(v => v.name.toLowerCase().includes('clara'));
+      console.log('Looking for Clara:', selectedVoice);
     }
     
-    // Strong fallback chain if preferred not found
+    // Fallback if preferred not found
     if (!selectedVoice) {
-      selectedVoice = voices.find(v => v.name.includes('Sophia')) ||
-                      voices.find(v => v.name.includes('Aurora')) ||
-                      voices.find(v => v.name.includes('Clara')) ||
+      console.log('Preferred voice not found, using fallback');
+      selectedVoice = voices.find(v => v.name.toLowerCase().includes('sophia')) ||
+                      voices.find(v => v.name.toLowerCase().includes('aurora')) ||
+                      voices.find(v => v.name.toLowerCase().includes('clara')) ||
                       voices.find(v => v.name.toLowerCase().includes('female')) ||
                       voices[0];
     }
+    
+    console.log('Final selected voice:', selectedVoice?.name);
     
     if (selectedVoice) {
       utterance.voice = selectedVoice;
@@ -243,26 +276,18 @@ export default function PowerUp() {
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
     
-    let voices = synth.current.getVoices();
+    const voices = synth.current.getVoices();
     
-    // If voices not loaded, wait for them
     if (voices.length === 0) {
-      const voicesLoadedHandler = () => {
-        voices = synth.current.getVoices();
-        if (voices.length > 0) {
+      // Voices not loaded, wait for them
+      const handler = () => {
+        const loadedVoices = synth.current.getVoices();
+        if (loadedVoices.length > 0) {
           synth.current.onvoiceschanged = null;
-          selectAndSpeak(voices, utterance);
+          selectAndSpeak(loadedVoices, utterance);
         }
       };
-      synth.current.onvoiceschanged = voicesLoadedHandler;
-      
-      // Timeout fallback
-      setTimeout(() => {
-        voices = synth.current.getVoices();
-        if (voices.length > 0) {
-          selectAndSpeak(voices, utterance);
-        }
-      }, 300);
+      synth.current.onvoiceschanged = handler;
     } else {
       selectAndSpeak(voices, utterance);
     }
@@ -388,42 +413,22 @@ export default function PowerUp() {
     setTimeLeft(45);
     setIsRunning(true);
     
-    // 1-second pause before countdown, announce first
+    // Announce "Get ready!" - timer frozen at 5
     speak('Get ready!');
     
-    // Countdown starts after 1 second (giving user time to hear "Get ready!")
-    setTimeout(() => {
-      setCountdown(4); // Start countdown from 4 (we said "5" in Get ready)
-      speak('5');
-    }, 1300);
-    
-    setTimeout(() => { setCountdown(3); speak('4'); }, 2300);
-    setTimeout(() => { setCountdown(2); speak('3'); }, 3300);
-    setTimeout(() => { setCountdown(1); speak('2'); }, 4300);
-    setTimeout(() => { setCountdown(0); speak('1'); }, 5300);
-    setTimeout(() => speak('Go!'), 6300);
-    
-    // Start the actual workout
+    // The new useEffect will automatically speak "5", "4", "3", "2", "1", "Go!" as countdown decrements
+    // Then announce first exercise after "Go!"
     setTimeout(() => {
       const firstExercise = workoutPlan[0];
-      setTimeLeft(firstExercise.duration);
+      const exerciseName = exercises[firstExercise.exercise].description;
       
       if (firstExercise.isSkipping) {
         const skipsEst = Math.round((firstExercise.duration / 45) * 105);
-        setEstimatedSkips(skipsEst);
+        speak(`${exerciseName}. Try for ${skipsEst} skips.`);
+      } else {
+        speak(`${exerciseName}. Let's go.`);
       }
-      
-      // Announce the first exercise with a slight delay after "Go!"
-      setTimeout(() => {
-        const exerciseName = exercises[firstExercise.exercise].description;
-        if (firstExercise.isSkipping) {
-          const skipsEst = Math.round((firstExercise.duration / 45) * 105);
-          speak(`${exerciseName}. Try for ${skipsEst} skips.`);
-        } else {
-          speak(`${exerciseName}. Let's go.`);
-        }
-      }, 800);
-    }, 6800);
+    }, 7000);
   };
 
   const funPhrases = {
