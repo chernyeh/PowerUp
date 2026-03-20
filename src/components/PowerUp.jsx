@@ -66,10 +66,12 @@ const presets = {
 
 export default function PowerUp() {
   const [stage, setStage] = useState('config');
-  const [selectedPreset, setSelectedPreset] = useState(null);
+  const [selectedPreset, setSelectedPreset] = useState('matt');
   const [skipGoal, setSkipGoal] = useState(null);
   const [showSkipGoalModal, setShowSkipGoalModal] = useState(false);
   const [skipInput, setSkipInput] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
+  const [lastWorkoutSettings, setLastWorkoutSettings] = useState(null);
   
   const [ageGroup, setAgeGroup] = useState('11-12');
   const [fitnessLevel, setFitnessLevel] = useState('intermediate');
@@ -224,28 +226,30 @@ export default function PowerUp() {
 
   const speakWithBrowserVoice = (text, speed = 1.0) => {
     // Instant browser voice - used for countdown to stay in sync
-    if (synth.current) {
-      synth.current.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = speed;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-      
-      const voices = synth.current.getVoices();
-      if (voices.length > 0) {
-        const googleVoice = voices.find(v => v.name.includes('Google US English')) ||
-                           voices.find(v => v.name.includes('Google UK English Female')) ||
-                           voices[0];
-        if (googleVoice) {
-          utterance.voice = googleVoice;
-        }
+    if (isMuted || !synth.current) return;
+    
+    synth.current.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = speed;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    
+    const voices = synth.current.getVoices();
+    if (voices.length > 0) {
+      const googleVoice = voices.find(v => v.name.includes('Google US English')) ||
+                         voices.find(v => v.name.includes('Google UK English Female')) ||
+                         voices[0];
+      if (googleVoice) {
+        utterance.voice = googleVoice;
       }
-      
-      synth.current.speak(utterance);
     }
+    
+    synth.current.speak(utterance);
   };
 
   const speak = async (text, speed = 1.0) => {
+    if (isMuted) return;
+    
     const apiKey = process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY;
 
     // If API key exists, try ElevenLabs first
@@ -328,6 +332,17 @@ export default function PowerUp() {
       alert('Please select a workout option');
       return;
     }
+
+    // Save last workout settings
+    setLastWorkoutSettings({
+      selectedPreset,
+      selectedGoal,
+      selectedExercises,
+      duration,
+      ageGroup,
+      fitnessLevel,
+      skipGoal,
+    });
 
     let exercisesToUse = [];
     let skipsForWorkout = skipGoal || 250;
@@ -489,6 +504,18 @@ export default function PowerUp() {
       'Keep it up! Nice rest break coming up.',
       'You\'re brilliant at this! Time to chill.',
       'Incredible form! Let those muscles rest.',
+    ],
+    pauseMessages: [
+      '⏸️ Paused - Take a breath, you\'ve got this!',
+      '⏸️ No problem! Take your time.',
+      '⏸️ Need water? Grab some!',
+      '⏸️ You\'re doing great - rest a moment.',
+      '⏸️ Totally normal to pause. You\'ve got this!',
+      '⏸️ Getting tired? That\'s how you know it\'s working!',
+      '⏸️ Take a second. Ready when you are.',
+      '⏸️ Catch your breath! You\'re awesome.',
+      '⏸️ Smart move pausing. You\'re in control!',
+      '⏸️ Breathe it out. You\'ve got plenty left.',
     ],
     nextExercise: [
       'Ready for round two?',
@@ -657,6 +684,31 @@ export default function PowerUp() {
         <h1 style={{ color: colors.primary, marginBottom: '5px', fontSize: '3.2em', fontWeight: '600', ...fontStyle }}>PowerUp!</h1>
         <p style={{ color: colors.textSecondary, fontSize: '1.2em', fontWeight: '500', marginBottom: '40px', ...fontStyle }}>Your Fitness Champion</p>
 
+        {/* Quick Start Buttons */}
+        <div style={{ marginBottom: '40px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
+          <button onClick={() => { setSelectedPreset('matt'); setSelectedGoal(null); setSelectedExercises([]); setShowSkipGoalModal(true); setSkipInput(presets.matt.defaultSkipGoal.toString()); }} style={{ padding: '16px', background: colors.primary, color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95em', ...fontStyle }}>
+            ⚡ Quick Start
+          </button>
+          {lastWorkoutSettings && (
+            <button onClick={() => { 
+              setSelectedPreset(lastWorkoutSettings.selectedPreset);
+              setSelectedGoal(lastWorkoutSettings.selectedGoal);
+              setSelectedExercises(lastWorkoutSettings.selectedExercises);
+              setDuration(lastWorkoutSettings.duration);
+              setAgeGroup(lastWorkoutSettings.ageGroup);
+              setFitnessLevel(lastWorkoutSettings.fitnessLevel);
+              setSkipGoal(lastWorkoutSettings.skipGoal);
+              setShowSkipGoalModal(false);
+              generatePlan();
+            }} style={{ padding: '16px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95em', ...fontStyle }}>
+              🔄 Last Workout
+            </button>
+          )}
+          <button onClick={() => setIsMuted(!isMuted)} style={{ padding: '16px', background: isMuted ? '#dc2626' : '#6b7280', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95em', ...fontStyle }}>
+            {isMuted ? '🔇 Muted' : '🔊 Sound On'}
+          </button>
+        </div>
+
         <div style={{ marginBottom: '40px', padding: '20px', background: 'white', borderRadius: '12px', border: `2px solid ${colors.primary}` }}>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             {[15, 20, 25, 30, 35, 40].map(mins => (
@@ -789,7 +841,19 @@ export default function PowerUp() {
     return (
       <div style={{ padding: '12px 20px', ...fontStyle, minHeight: '100vh', background: colors.light, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         {/* TOP: Timer and Activity */}
-        <div style={{ minHeight: 0, flex: 0 }}>
+        <div style={{ minHeight: 0, flex: 0, position: 'relative' }}>
+          <button onClick={() => setIsMuted(!isMuted)} style={{ position: 'absolute', top: '0', right: '0', padding: '8px 12px', background: isMuted ? '#dc2626' : '#f3f4f6', color: isMuted ? 'white' : colors.text, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '0.9em', ...fontStyle }}>
+            {isMuted ? '🔇' : '🔊'}
+          </button>
+          
+          {/* Progress Bar */}
+          <div style={{ background: colors.border, height: '6px', borderRadius: '3px', marginBottom: '10px', overflow: 'hidden' }}>
+            <div style={{ background: colors.primary, height: '100%', width: `${((currentIndex + 1) / workoutPlan.length) * 100}%`, transition: 'width 0.3s ease' }} />
+          </div>
+          <div style={{ fontSize: '0.8em', color: colors.textSecondary, marginBottom: '10px', fontWeight: '500', textAlign: 'center' }}>
+            Exercise {currentIndex + 1} of {workoutPlan.length} • {Math.floor((workoutPlan.reduce((sum, item) => sum + (item.type === 'exercise' ? item.duration : 0), 0) - workoutPlan.slice(0, currentIndex).reduce((sum, item) => sum + (item.type === 'exercise' ? item.duration : 0), 0) + timeLeft) / 60)}m remaining
+          </div>
+          
           <h2 style={{ color: colors.primary, marginBottom: '5px', ...fontStyle, fontSize: '2.4em', fontWeight: '600' }}>
             {countdown > 0 ? 'Get Ready!' : current?.type === 'rest' ? 'Rest Time' : current?.type === 'transition' ? 'Break Time' : exerciseData?.description || 'Rest'}
           </h2>
@@ -807,22 +871,59 @@ export default function PowerUp() {
 
         {/* MIDDLE: Controls and Tips */}
         <div style={{ minHeight: 0, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
-          <div style={{ marginBottom: '10px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+          <div style={{ marginBottom: '10px', display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
             {!isRunning ? (
               <button onClick={() => { setIsRunning(true); setCountdown(0); setIsPaused(false); }} style={{ padding: '10px 16px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.85em', ...fontStyle }}>
                 <PlayIcon size={14} style={{ display: 'inline', marginRight: '4px' }} /> Play
               </button>
             ) : (
               <>
-                <button onClick={() => setIsPaused(!isPaused)} style={{ padding: '10px 16px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.85em', ...fontStyle }}>
+                <button onClick={() => setIsPaused(!isPaused)} style={{ padding: '10px 16px', background: isPaused ? '#10b981' : '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.85em', ...fontStyle }}>
                   <Pause size={14} style={{ display: 'inline', marginRight: '4px' }} /> {isPaused ? 'Resume' : 'Pause'}
                 </button>
-                <button onClick={() => { setIsRunning(false); setStage('config'); setWorkoutPlan([]); }} style={{ padding: '10px 16px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.85em', ...fontStyle }}>
+                {isPaused && (
+                  <>
+                    <button onClick={() => { setTimeLeft(timeLeft + 15); setIsPaused(false); setIsRunning(true); }} style={{ padding: '10px 14px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.8em', ...fontStyle }}>
+                      +15s
+                    </button>
+                    <button onClick={() => { setTimeLeft(timeLeft + 30); setIsPaused(false); setIsRunning(true); }} style={{ padding: '10px 14px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.8em', ...fontStyle }}>
+                      +30s
+                    </button>
+                  </>
+                )}
+                <button onClick={() => { setIsRunning(false); setStage('config'); setWorkoutPlan([]); }} style={{ padding: '10px 14px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.85em', ...fontStyle }}>
                   <StopCircle size={14} style={{ display: 'inline', marginRight: '4px' }} /> Stop
                 </button>
               </>
             )}
           </div>
+
+          {isPaused && (
+            <div style={{ background: '#fef3c7', border: `2px solid #f59e0b`, padding: '8px', borderRadius: '6px', marginBottom: '8px', textAlign: 'center' }}>
+              <p style={{ color: '#92400e', fontSize: '0.85em', fontWeight: '600', margin: '0 0 6px 0', ...fontStyle }}>{getRandomPhrase('pauseMessages')}</p>
+              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button onClick={() => { setIsPaused(false); setIsRunning(true); }} style={{ padding: '6px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '0.75em', ...fontStyle }}>
+                  Continue
+                </button>
+                <button onClick={() => { 
+                  if (currentIndex < workoutPlan.length - 1) {
+                    setCurrentIndex(currentIndex + 1);
+                    const nextItem = workoutPlan[currentIndex + 1];
+                    // Insert 60s extra break before next exercise
+                    const newPlan = [...workoutPlan];
+                    newPlan.splice(currentIndex + 1, 0, { type: 'rest', duration: 60, isExtraBreak: true });
+                    setWorkoutPlan(newPlan);
+                    setTimeLeft(60);
+                    setIsPaused(false);
+                    setIsRunning(true);
+                    speak('Extra break! Drink some water, catch your breath.');
+                  }
+                }} style={{ padding: '6px 12px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '0.75em', ...fontStyle }}>
+                  Skip + Break
+                </button>
+              </div>
+            </div>
+          )}
 
           {exerciseData && (
             <div style={{ background: 'white', padding: '8px', borderRadius: '6px', marginBottom: '8px', border: `1px solid ${colors.border}`, maxWidth: '500px', margin: '0 auto' }}>
